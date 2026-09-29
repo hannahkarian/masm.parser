@@ -1,0 +1,73 @@
+use crate::ast::*; // the module ast.rs and * means import everything
+
+grammar;
+
+// skip whitespace and // comments
+match {
+    r"\s*" => { }, // matches whitespace
+    r"//[^\n\r]*[\n\r]*" => { }, // [^\n\r]* means any characters except newline
+} else {
+    _
+}
+
+// describes the whole program, which is a sequence of items(processes, annotations, definitions, instructions)
+pub Program: Program = {
+    ".prog" ":" <items:Item*> => build_program(items), 
+    // the * means zero or more items (macro)
+    // put them in a Vec<Item> called items
+};
+
+Item: Item = {
+    ".proc" <name:Ident> ":"  => Item::Proc(name),
+    <a:Annotation>            => Item::Annotation(a),
+    <d:Def>                   => Item::Def(d),
+    <i:Instruction> ";"       => Item::Instruction(i),
+};
+
+// @SOURCEINFO [ file = "..." ]
+Annotation: Annotation = {
+    <name:AnnotName> "[" <key:Ident> "=" <value:Str> "]" => 
+        Annotation { name, fields: vec![(key, value)] }, // vec![(key, value)] creates a Vec with one tuple in it
+        // full parser in manticore_writer.cc uses the Comma<T> macro for several pairs, but we only need one here
+};
+
+Def: Def = {
+    ".wire" <name:Ident> <width:Num> =>
+        Def::Wire { name, width: width as u32 }, // Num produces a u64, but the field is u32
+    ".const" <name:Ident> <width:Num> <value:Num> =>
+        Def::Const { name, width: width as u32, value },
+    ".reg" <name:Ident> <width:Num> ".input" <current:Ident> <init:Num?> ".output" <next:Ident> => // the ? means optional, so init can be None
+        Def::Reg { name, width: width as u32, current, init, next },
+};
+
+Instruction: Instruction = {
+    // <rd:Ident> means "parse an Ident here and call it rd"
+    // MOV is not mistaken for an Ident because it is a literal string and
+    // when a fixed string and a regex match same text, LALRPOP prefers the fixed string
+    "MOV" <rd:Ident> "," <rs:Ident> =>
+        Instruction::Mov { rd, rs },
+    "(" <order:Num> ")" "FINISH" <cond:Ident> =>
+        Instruction::Finish { order: order as u32, cond },
+};
+
+// TOKENS
+// defined with regular expressions. 
+// The syntax is <name>: <type> = <regex> => <action>;
+
+Ident: String = r"[A-Za-z_][A-Za-z0-9_]*" => <>.to_string();
+// identifier is a letter or _, followed by letters, digits or _
+
+AnnotName: String = r"@[A-Za-z_]+" => <>[1..].to_string();   
+// <>[1..] is a string slice from byte 1 to the end, which drops the '@'
+
+Str: String = <s:r#""[^"]*""#> => s[1..s.len() - 1].to_string(); // drop the quotes
+// # is needed because the regex itself contains quotes ""
+// "[^"]*" means a quote, followed by zero or more non-quote characters, followed by a quote
+// s[1..s.len() - 1] drops the first and the last character
+
+Num: u64 = {
+    r"[0-9]+"  => <>.parse().unwrap(), // Decimal number
+    r"0b[01]+" => u64::from_str_radix(&<>[2..], 2).unwrap(), // Binary number
+    // &<>[2..] drops the 0b
+    // from_str_radix(..., 2) reads the rest as base 2
+};
