@@ -48,6 +48,15 @@ pub enum Def {
 pub enum Instruction {
     // MOV ys_w3, ys_i1;
     Mov { rd: String, rs: String }, // rd is the destination register and rs the source register
+    // ADD ys_w6, ys_w3, ys_w5;   rd = rs1 + rs2
+    Add { rd: String, rs1: String, rs2: String },
+    // SEQ ys_w7, ys_w3, ys_c1;   rd = (rs1 == rs2), a 1-bit result
+    Seq { rd: String, rs1: String, rs2: String },
+    // MUX ys_w4, ys_w7, ys_w6, ys_w3;   rd = sel ? rtrue : rfalse
+    // operand order matches instr.MUX(rd, sel, rfalse, rtrue) in manticore_writer.cc
+    Mux { rd: String, sel: String, rfalse: String, rtrue: String },
+    // PADZERO ys_w5, ys_c0, 3;   rd = rs zero-extended to `width` bits
+    PadZero { rd: String, rs: String, width: u32 },
     // (0) FINISH ys_w3;
     Finish { order: u32, cond: String },
 }

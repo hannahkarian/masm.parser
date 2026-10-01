@@ -43,9 +43,18 @@ Def: Def = {
 Instruction: Instruction = {
     // <rd:Ident> means "parse an Ident here and call it rd"
     // MOV is not mistaken for an Ident because it is a literal string and
-    // when a fixed string and a regex match same text, LALRPOP prefers the fixed string
+    // when a fixed string and a regex match same text, LALRPOP prefers the fixed string. 
+    // so literal string win over Ident regex.
     "MOV" <rd:Ident> "," <rs:Ident> =>
         Instruction::Mov { rd, rs },
+    "ADD" <rd:Ident> "," <rs1:Ident> "," <rs2:Ident> =>
+        Instruction::Add { rd, rs1, rs2 },
+    "SEQ" <rd:Ident> "," <rs1:Ident> "," <rs2:Ident> =>
+        Instruction::Seq { rd, rs1, rs2 },
+    "MUX" <rd:Ident> "," <sel:Ident> "," <rfalse:Ident> "," <rtrue:Ident> =>
+        Instruction::Mux { rd, sel, rfalse, rtrue },
+    "PADZERO" <rd:Ident> "," <rs:Ident> "," <width:Num> =>
+        Instruction::PadZero { rd, rs, width: width as u32 },
     "(" <order:Num> ")" "FINISH" <cond:Ident> =>
         Instruction::Finish { order: order as u32, cond },
 };
