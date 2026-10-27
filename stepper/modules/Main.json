@@ -1,0 +1,35 @@
+{
+  "partition": {
+    "index": 0,
+    "name": "Main",
+    "inbits": {
+      "clock": [
+        0
+      ]
+    },
+    "outbits": {},
+    "crossbits": {}
+  },
+  "gold_module": {
+    "name": "gold.Main",
+    "internal": {},
+    "unused": {
+      "clock": [
+        0
+      ]
+    },
+    "cellcount": 0,
+    "bitcount": 1
+  },
+  "gate_module": {
+    "name": "gold.Main",
+    "internal": {},
+    "unused": {
+      "clock": [
+        0
+      ]
+    },
+    "cellcount": 0,
+    "bitcount": 1
+  }
+}

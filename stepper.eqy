@@ -1,0 +1,7 @@
+[gold]
+read_verilog -sv stepper.sv
+prep -top Main
+
+[gate]
+read_verilog -sv generated.sv
+prep -top Main

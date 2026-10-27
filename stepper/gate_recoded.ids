@@ -1,0 +1,6 @@
+Main . A:src="generated.sv:2.1-64.10" A:top=1
+Main ys_w8 w=3:0 A:src="generated.sv:11.16-11.21"
+Main ys_w6 w=3:0 A:src="generated.sv:9.16-9.21"
+Main ys_w13 w=3:0 A:src="generated.sv:16.16-16.22"
+Main ys_w12 w=3:0 A:src="generated.sv:15.16-15.22"
+Main clock w=0:0 A:src="generated.sv:3.16-3.21" P=I

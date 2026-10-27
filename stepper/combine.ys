@@ -1,0 +1,11 @@
+plugin -i /home/hana/Downloads/oss-cad-suite/libexec/../share/yosys/plugins/eqy_combine.so
+read_rtlil stepper/gold.il
+uniquify
+hierarchy
+design -stash gold
+read_rtlil stepper/gate_recoded.il
+uniquify
+hierarchy
+design -stash gate
+eqy_combine -gold_ids stepper/gold.ids -gate_ids stepper/gate_recoded.ids
+write_rtlil stepper/combined.il

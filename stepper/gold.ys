@@ -1,0 +1,6 @@
+read_verilog -sv stepper.sv
+prep -top Main
+opt_clean
+check -initdrv
+setundef -undriven -undef
+write_rtlil stepper/gold.il

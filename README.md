@@ -1,126 +1,163 @@
 # masm_parser
 
-A parser for **Manticore assembly (MASM)**, written in Rust with [LALRPOP](https://lalrpop.github.io/lalrpop/).
+A Rust proof of concept that reads **Manticore netlist assembly (MASM)**, stores it
+in Rust data structures, and writes it back out as **Verilog**. The generated Verilog
+is then compared with the original design using **Logic Equivalence Checking (EQY)**
+to show that nothing was lost on the way.
 
-It reads the `main.masm` file produced by the [Manticore](https://github.com/ManticoreRTL) frontend and turns it into Rust data structures (an abstract syntax tree). This is the first step towards converting MASM back to Verilog and checking that the result is equivalent to the original design.
+Internship project at QBayLogic (Helios / Manticore), Saxion University of Applied Sciences.
+Based on [ManticoreRTL](https://github.com/ManticoreRTL) and the paper
+*Manticore: Hardware-Accelerated RTL Simulation with Static Bulk-Synchronous Parallelism*.
 
-This repository is part of my internship project.
-
-## Background
-
-Manticore is a hardware-accelerated RTL simulator. Its frontend is a modified Yosys (`v2masmyosys`) that compiles a Verilog design into MASM, a low-level assembly language with wires, registers, constants and simple instructions:
-
-```
-Verilog (.sv)  ──►  v2masmyosys  ──►  main.masm  ──►  masm_parser  ──►  Rust AST
-```
-
-The grammar follows the original Scala parser (`UnconstrainedAssemblyParser.scala`) and the output format of `manticore_writer.cc` from the Manticore repositories.
-
-## Supported syntax
-
-| Kind | Syntax | Example |
-|---|---|---|
-| Program / process | `.prog:` / `.proc name:` | `.proc main:` |
-| Wire | `.wire name width` | `.wire ys_w3 1` |
-| Constant | `.const name width value` | `.const ys_c0 1 0b1` |
-| Register | `.reg name width .input cur [init] .output next` | `.reg ys_r0 1 .input ys_i1 0b0 .output ys_o2` |
-| Move | `MOV rd, rs;` | `MOV ys_w3, ys_i1;` |
-| Finish | `(order) FINISH cond;` | `(0) FINISH ys_w3;` |
-| Annotation | `@NAME [ key = "value" ]` | `@SOURCEINFO [ file = "finish.sv:4.9-4.16" ]` |
-| Comment | `// ...` | `// wires` |
-
-Numbers can be decimal (`3`) or binary (`0b101`).
-
-## Requirements
-
-- Rust and Cargo (a recent stable version; install with [rustup](https://rustup.rs))
-- `lalrpop` 0.23.1 (downloaded automatically by Cargo)
-- To generate your own `.masm` files: the Manticore frontend `v2masmyosys`
-
-## Build and run
-
-```bash
-git clone <this-repo-url>
-cd masm_parser
-cargo run -- finish.masm
-```
-
-The `--` separates Cargo's arguments from the program's arguments. On success, the parsed program is printed:
+## The roundtrip
 
 ```
-Program {
-    processes: [
-        Process {
-            name: "main",
-            defs: [
-                Wire { name: "ys_w3", width: 1 },
-                Reg { name: "ys_r0", width: 1, current: "ys_i1", init: Some(0), next: "ys_o2" },
-                Const { name: "ys_c0", width: 1, value: 1 },
-            ],
-            instructions: [
-                Mov { rd: "ys_w3", rs: "ys_i1" },
-                Mov { rd: "ys_o2", rs: "ys_c0" },
-                Finish { order: 0, cond: "ys_w3" },
-            ],
-        },
-    ],
-}
+stepper.sv ──(Manticore Yosys frontend)──► stepper.masm
+                                              │
+                                              │  masm.lalrpop   parse text → AST
+                                              ▼
+                                         ast.rs types (Program, Def, Instruction)
+                                              │
+                                              │  verilog.rs     check + print
+                                              ▼
+                                         generated.sv
+                                              │
+stepper.sv ◄────────── EQY (stepper.eqy) ─────┘   are they equivalent?
 ```
 
-On a syntax error, the parser reports the position and the expected tokens, for example:
+## Running it
 
-```
-parse error: Unrecognized token `b` found at 26:27
-Expected one of ","
-```
+**1. Verilog → MASM** with the Manticore Yosys fork (`v2masmyosys`, built from
+[manticore-frontend](https://github.com/ManticoreRTL/manticore-frontend)). The passes run
+in this order: `read_verilog -sv -masm`, `hierarchy`, `proc`, the `opt`/`memory_*`
+preparation passes, `flatten`, the `manticore_*` lowering passes, and finally
+`manticore_writer`, which writes the `.masm` file.
 
-## Generating a MASM file from Verilog
+**2. MASM → Verilog** with this project:
 
-The example `finish.masm` was generated from this design:
-
-```verilog
-// finish.sv
-module Main (input wire clock);
-    always @(posedge clock)
-        $finish;
-endmodule
+```sh
+cargo run -- stepper.masm      # writes generated.sv in the current directory
 ```
 
-with the Manticore frontend:
+Errors (undeclared names, a signal assigned twice, ...) stop the program; width
+mismatches are printed as warnings and generation continues.
 
-```bash
-./v2masmyosys -p "read_verilog -sv -masm finish.sv; hierarchy -check; hierarchy -auto-top; proc; opt -purge; wreduce -memx; opt_reduce; opt_clean; check -assert; memory_collect; memory_unpack; memory_dff; manticore_init; flatten; manticore_meminit; opt -purge; manticore_dff; manticore_opt_replicate; manticore_subword; manticore_check; manticore_writer main.masm"
+**3. Equivalence check**:
+
+```sh
+eqy stepper.eqy                # [gold] = stepper.sv, [gate] = generated.sv
 ```
 
-A design must contain a `$finish` (or `$display`). Otherwise Yosys removes all logic, because the top module has no outputs.
+## Files
 
-## Project structure
+| File | What it does |
+|------|--------------|
+| `src/main.rs` | Entry point: read the file, parse, check, write `generated.sv`. |
+| `src/masm.lalrpop` | The grammar. LALRPOP turns it into a Rust parser at build time. |
+| `src/ast.rs` | The data types a parsed program is stored in, plus `build_program`. |
+| `src/verilog.rs` | `Context` (checks + width table) and the `pp_*` printers that produce Verilog. |
+| `build.rs` | Runs LALRPOP before compiling, so the parser is always up to date. |
+| `stepper.sv` | Small example design (the reference / "gold" design). |
+| `stepper.masm` | Output of the Manticore frontend for `stepper.sv`. |
+| `generated.sv` | Output of this tool for `stepper.masm` (the "gate" design). |
+| `stepper.eqy` | EQY configuration comparing the two Verilog files. |
 
-```
-masm_parser/
-├── Cargo.toml         # dependencies: lalrpop (build), lalrpop-util (runtime)
-├── build.rs           # generates the parser from src/masm.lalrpop at build time
-├── finish.masm        # example input
-└── src/
-    ├── masm.lalrpop   # the grammar: lexer rules and parser rules
-    ├── ast.rs         # Rust types for the parsed program + build_program()
-    └── main.rs        # reads the file, runs the parser, prints the result
-```
+Every source file is commented line by line.
 
-How it works:
+## Supported MASM subset
 
-1. `build.rs` calls `lalrpop::process_src()`, which turns `src/masm.lalrpop` into Rust code during `cargo build`.
-2. `main.rs` includes that code with `lalrpop_mod!(masm)` and calls `masm::ProgramParser::new().parse(&text)`.
-3. The grammar produces a flat list of items (annotations, process headers, definitions, instructions). `build_program()` in `ast.rs` groups them into processes. This flat design avoids LALR conflicts, because annotations can appear before both definitions and instructions.
+| MASM | Verilog |
+|------|---------|
+| `.wire w 8` | `wire [7:0] w;` |
+| `.const c 4 0b1010` | `localparam [3:0] c = 4'b1010;` |
+| `.reg r 8 .input cur 0b0 .output nxt` | `reg [7:0] cur = 8'b0;` + `wire [7:0] nxt;` + `cur <= nxt;` on the clock edge |
+| `MOV rd, rs` | `assign rd = rs;` |
+| `ADD rd, a, b` | `assign rd = a + b;` |
+| `SEQ rd, a, b` | `assign rd = a == b;` |
+| `MUX rd, sel, f, t` | `assign rd = sel ? t : f;` (note: MASM lists the *false* value first) |
+| `PADZERO rd, rs, 8` | `assign rd = {{N{1'b0}}, rs};` |
+| `(0) FINISH c` | `always @(*) if (c) $finish;` |
+| `@NAME [ key = "value" ]` | parsed, then ignored |
 
+**Register naming.** A `.reg` has three names. `.input` is the flip-flop's Q (the
+value stored now, an *input* to the logic) and `.output` is its D (the value for
+the next clock edge, an *output* of the logic). This follows `manticore_writer.cc`.
 
-## References
+## Duplicate names and duplicate assignments
 
-- Manticore: <https://github.com/ManticoreRTL>
-- M. Emami et al., *Manticore: Hardware-Accelerated RTL Simulation with Static Bulk-Synchronous Parallelism*
-- LALRPOP book: <https://lalrpop.github.io/lalrpop/>
-- The Rust Programming Language: <https://doc.rust-lang.org/book/>
+`Context::new` in `verilog.rs` checks two different kinds of duplicates:
 
-## Author
+| Problem | Example | How it is detected |
+|---------|---------|--------------------|
+| A name declared twice | `.wire ys_w3 4` appears two times | `HashMap::insert` returns `Some(old value)` if the name was already in the `signals` table |
+| A signal assigned twice | two instructions both write `ys_w4` | `HashSet::insert` returns `false` if the name was already in the `driven` set |
 
-Hana Sabzikarian
+The second case matters because two `assign`s to the same wire in Verilog means two
+drivers, which is an error. A `HashMap` is used for declarations because it also has
+to store each name's kind and width; the `HashSet` only needs to remember names.
+
+**What the Manticore frontend does.** `manticore_writer.cc` has no duplicate check;
+it avoids duplicates by construction:
+
+- **Unique names.** `NameBuilder::next()` builds names as `ys_` + prefix + counter and
+  increments the counter every time. Wires (`w`) and registers (`r`, `i`, `o`) share
+  one counter, which is why `stepper.masm` has `ys_r0, ys_i1, ys_o2, ys_w3, ...`.
+  Constants (`c`) have their own counter, but the different prefix keeps
+  `ys_c3` and `ys_w3` apart.
+- **Each object declared once.** Before writing a `.wire`, `.reg` or `.const`, the
+  writer looks it up in a `dict` (`wires`, `states`, `constants`). If it already
+  exists, the existing name is reused. Constants are looked up by value, so the
+  constant `1` gets a single `.const` that all instructions share.
+- **One driver per signal.** Yosys runs `check -assert` earlier in the pipeline,
+  which rejects designs where a signal has more than one driver.
+
+So MASM straight from the frontend should never contain duplicates. The checks in
+this tool are a safety net for MASM from other sources (hand-written test files,
+edited files, or a different version of the writer). The frontend guarantees
+uniqueness by construction; this tool verifies it instead of assuming it.
+
+## Worked example: `stepper`
+
+`stepper.sv` counts `step` up by 1 every clock, adds 2 to `total` whenever
+`step == 3`, and stops the simulation when `total == 6`. In the MASM the names are
+replaced by Yosys-generated ones:
+
+| MASM name | Meaning in `stepper.sv` |
+|-----------|-------------------------|
+| `ys_i1` / `ys_w3` | `total` (current value) |
+| `ys_o2` / `ys_w4` | next value of `total` = `step == 3 ? total + 2 : total` |
+| `ys_i15` / `ys_w5` | `step` (current value) |
+| `ys_o16` / `ys_w7` | next value of `step` = `step + 1` |
+| `ys_w10` | `step == 3` |
+| `ys_w11` | `total == 6` |
+| `ys_i18` / `ys_w20` | registered "finish" flag; `FINISH` fires when it is 1 |
+| `ys_c0`, `ys_c1`, ... | constants 1, 2, 6, 3, 0; most are zero-extended to 4 bits with `PADZERO` |
+
+The finish condition goes through a register (`ys_r17`), so it changes right after a
+clock edge. That is why `always @(*) if (ys_w20) $finish;` behaves like the original
+`$finish` inside `always @(posedge clock)`.
+
+## Limitations
+
+- Only the instructions in the table above are supported; anything else
+  (memories, other ALU ops, `$display`, ...) is a parse error.
+- Annotations allow a single `key = "value"` pair and are not kept.
+- Constants are limited to 64 bits (`u64`).
+- One clock, named `clock`; module name is `Main`.
+
+### `$finish` and EQY
+
+- **Not checked by EQY.** EQY compares the *logic* of the two designs. `$finish` is a
+  simulation command, not hardware, so whether the simulation stops at the right
+  moment is not covered by the equivalence check. To test that, run both designs in a
+  simulator (e.g. Icarus Verilog or Verilator) and compare when they stop.
+- **`` `ifndef SYNTHESIS `` guard.** In `stepper.sv`, the `$finish` is wrapped in
+  `` `ifndef SYNTHESIS `` / `` `endif ``. Yosys's `read_verilog` defines `SYNTHESIS` by
+  default, so that code is left out of the gold design. `verilog.rs` currently prints
+  `always @(*) if (c) $finish;` **without** this guard, so the gate design still
+  contains it. Depending on the Yosys version this can give warnings or errors. Until the
+  printer emits the guard itself, it has to be added to `generated.sv` by hand, and a
+  hand-edited file no longer matches what `cargo run` produces.
+- **Sanity check.** `Main` has no output ports, only `clock`. It is worth confirming that
+  EQY really compares the internal signals: change one line of `generated.sv` on purpose
+  (for example `+` to `-`) and check that EQY then reports the designs as *not* equivalent.

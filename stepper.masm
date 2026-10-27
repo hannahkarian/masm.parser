@@ -1,0 +1,83 @@
+.prog:
+.proc main:
+// wires
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:6.5-12.8" ]
+	@DEBUGSYMBOL [ symbol = "total" ]
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:4.15-4.20" ]
+// \total
+	.wire ys_w3 4
+// $mux_out$
+	.wire ys_w4 4
+	@DEBUGSYMBOL [ symbol = "step" ]
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:3.15-3.19" ]
+// \step
+	.wire ys_w5 4
+	.wire  ys_w6 4
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:6.5-12.8" ]
+// $0\step[3:0]
+	.wire ys_w7 4
+	.wire  ys_w8 4
+// $add$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:9$6_Y
+	.wire ys_w9 4
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:8.13-8.22" ]
+// $eq$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:8$5_Y
+	.wire ys_w10 1
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:10.13-10.23" ]
+// $eq$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:10$7_Y
+	.wire ys_w11 1
+	.wire  ys_w12 4
+	.wire  ys_w13 4
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:6.5-12.8" ]
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:6.5-12.8" ]
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:11.13-11.20" ]
+// $manticore_task$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:11$EN$1
+	.wire ys_w20 1
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:6.5-12.8" ]
+// $0$manticore_task$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:11$EN$1[0:0]$3
+	.wire ys_w21 1
+
+// states
+	.reg ys_r0 4 .input ys_i1 0b0000 .output ys_o2
+	.reg ys_r14 4 .input ys_i15 0b0000 .output ys_o16
+	.reg ys_r17 1 .input ys_i18 0b0 .output ys_o19
+
+// memories
+// constants
+	.const ys_c0 1 0b1
+	.const ys_c1 2 0b10
+	.const ys_c2 3 0b110
+	.const ys_c3 2 0b11
+	.const ys_c4 1 0b0
+
+// instructions
+// $dff_cast$ : $dff
+	MOV ys_w3, ys_i1;
+	MOV ys_o2, ys_w4;
+// $add$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:7$4 : $add
+	PADZERO ys_w6, ys_c0, 4;
+	ADD ys_w7, ys_w5, ys_w6;
+// $add$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:9$6 : $add
+	PADZERO ys_w8, ys_c1, 4;
+	ADD ys_w9, ys_w3, ys_w8;
+// $dff_mux$ : $mux
+	MUX ys_w4, ys_w10, ys_w3, ys_w9;
+// $eq$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:10$7 : $eq
+	PADZERO ys_w12, ys_c2, 4;
+	SEQ ys_w11, ys_w3, ys_w12;
+// $eq$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:8$5 : $eq
+	PADZERO ys_w13, ys_c3, 4;
+	SEQ ys_w10, ys_w5, ys_w13;
+// $manticore$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:11$8 : $manticore
+// $procdff$17 : $dff
+	MOV ys_w5, ys_i15;
+	MOV ys_o16, ys_w7;
+// $procdff$19 : $dff
+	MOV ys_w20, ys_i18;
+	MOV ys_o19, ys_w21;
+// $procmux$13 : $mux
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:10.13-10.23|/home/hana/projects/hana-internship/hana-manticore/stepper.sv:10.9-11.21" ]
+	MUX ys_w21, ys_w11, ys_c4, ys_c0;
+// $manticore$/home/hana/projects/hana-internship/hana-manticore/stepper.sv:11$8 : $manticore
+	@SOURCEINFO [ file = "/home/hana/projects/hana-internship/hana-manticore/stepper.sv:11.13-11.20" ]
+	(0) FINISH ys_w20;
+

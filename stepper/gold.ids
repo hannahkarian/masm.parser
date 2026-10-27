@@ -1,0 +1,2 @@
+Main . A:src="stepper.sv:1.1-15.10" A:top=1
+Main clock w=0:0 A:src="stepper.sv:1.25-1.30" P=I

@@ -1,0 +1,19 @@
+EQY 16:59:37 [stepper] read_gold: starting process "yosys -ql stepper/gold.log stepper/gold.ys"
+EQY 16:59:37 [stepper] read_gold: finished (returncode=0)
+EQY 16:59:37 [stepper] read_gate: starting process "yosys -ql stepper/gate.log stepper/gate.ys"
+EQY 16:59:37 [stepper] read_gate: finished (returncode=0)
+EQY 16:59:37 [stepper] combine: starting process "yosys -ql stepper/combine.log stepper/combine.ys"
+EQY 16:59:37 [stepper] combine: finished (returncode=0)
+EQY 16:59:37 [stepper] partition: starting process "cd stepper; yosys -ql partition.log partition.ys"
+EQY 16:59:37 [stepper] partition: finished (returncode=0)
+EQY 16:59:37 [stepper] run: starting process "make -C stepper -f strategies.mk"
+EQY 16:59:37 [stepper] run: make: Entering directory '/home/hana/projects/masm_parser/stepper'
+EQY 16:59:37 [stepper] run: make -f strategies.mk summary
+EQY 16:59:37 [stepper] run: make[1]: Entering directory '/home/hana/projects/masm_parser/stepper'
+EQY 16:59:37 [stepper] run: make[1]: Leaving directory '/home/hana/projects/masm_parser/stepper'
+EQY 16:59:37 [stepper] run: make: Leaving directory '/home/hana/projects/masm_parser/stepper'
+EQY 16:59:37 [stepper] run: finished (returncode=0)
+EQY 16:59:37 [stepper] Successfully proved designs equivalent
+EQY 16:59:37 [stepper] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+EQY 16:59:37 [stepper] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+EQY 16:59:37 [stepper] DONE (PASS, rc=0)
