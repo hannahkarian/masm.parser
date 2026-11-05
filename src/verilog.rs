@@ -23,6 +23,9 @@ pub struct Context { // extra information the printers need
     pub source: Option<String>, // input file name for the header comment, or None
     pub warnings: Vec<String>, // problems that don't stop generation
     signals: HashMap<String, (Kind, u32)>, // table: signal name -> (kind, width in bits)
+    // (original name, MASM signal) pairs from @DEBUGSYMBOL that will be printed as
+    // `(* keep *) wire total = ys_w3;` so that EQY can match them with the gold design
+    aliases: Vec<(String, String)>,
 }
 
 impl Context { // functions that belong to Context
@@ -34,6 +37,7 @@ impl Context { // functions that belong to Context
             source: None, // no file name yet (main.rs sets it)
             warnings: Vec::new(), // no warnings yet
             signals: HashMap::new(), // empty signal table
+            aliases: Vec::new(), // no debug-symbol aliases yet
         };
         let mut errors = Vec::new(); // list where we collect error messages
 
@@ -53,6 +57,11 @@ impl Context { // functions that belong to Context
                         (next, Kind::RegNext, *width), // the next value
                     ],
                 };
+                if let Def::Const { name, width, value } = def { // a constant's value must fit in its width
+                    if *width < 64 && *value >> *width != 0 { // any 1-bit above the width?
+                        errors.push(format!("constant `{name}` value {value:#b} does not fit in {width} bits"));
+                    }
+                }
                 for (name, kind, width) in names { // check each declared name
                     if width == 0 { // a 0-bit signal is invalid
                         errors.push(format!("`{name}` has width 0")); // add an error message
@@ -101,10 +110,39 @@ impl Context { // functions that belong to Context
                 ctx.check_widths(instr); // add a warning if its widths don't fit
             }
         }
-        for (name, (kind, _)) in &ctx.signals { // go through the whole signal table
-            if *kind == Kind::RegNext && !driven.contains(name.as_str()) { // a register's next value that nobody writes
-                ctx.warnings // add to the warnings list...
-                    .push(format!("register input `{name}` is never assigned")); // ...this message
+        let mut undriven: Vec<&String> = ctx // a register's next value that nobody writes
+            .signals
+            .iter()
+            .filter(|(name, (kind, _))| *kind == Kind::RegNext && !driven.contains(name.as_str()))
+            .map(|(name, _)| name)
+            .collect();
+        undriven.sort(); // HashMap order is random; sort so the warnings are always in the same order
+        for name in undriven {
+            ctx.warnings
+                .push(format!("register input `{name}` is never assigned"));
+        }
+
+        // 4. debug symbols -> aliases (warnings only: a skipped alias just means EQY has
+        //    one name less to match)
+        let mut used: HashSet<String> = HashSet::new(); // alias names taken so far
+        for process in &program.processes {
+            for ds in &process.debug_symbols {
+                let problem = if !is_simple_identifier(&ds.symbol) {
+                    Some("is not a plain Verilog identifier")
+                } else if ds.symbol == clock || ctx.signals.contains_key(&ds.symbol) {
+                    Some("clashes with a MASM name or the clock")
+                } else if !used.insert(ds.symbol.clone()) {
+                    Some("is used for more than one signal")
+                } else {
+                    None
+                };
+                match problem {
+                    Some(p) => ctx.warnings.push(format!(
+                        "debug symbol `{}` (for `{}`) {p}; no alias printed",
+                        ds.symbol, ds.signal
+                    )),
+                    None => ctx.aliases.push((ds.symbol.clone(), ds.signal.clone())),
+                }
             }
         }
 
@@ -152,6 +190,21 @@ impl Context { // functions that belong to Context
             self.warnings.push(format!("{problem}: {instr:?}")); // ...add it plus the instruction to the warnings
         }
     }
+}
+
+// SystemVerilog keywords a debug symbol could plausibly be called (not the full list)
+const KEYWORDS: &[&str] = &[
+    "always", "assign", "begin", "bit", "case", "default", "else", "end", "for", "if", "initial",
+    "input", "int", "integer", "logic", "module", "output", "parameter", "localparam", "reg",
+    "wire", "byte", "final", "type", "string",
+];
+
+// true for names like `total` or `step_2`; false for `top.sub.x`, `\esc`, `mem[3]` or `reg`
+fn is_simple_identifier(name: &str) -> bool {
+    let mut chars = name.chars();
+    matches!(chars.next(), Some(c) if c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')
+        && !KEYWORDS.contains(&name)
 }
 
 fn operands(instr: &Instruction) -> Vec<&String> { // list every name an instruction uses
@@ -360,6 +413,19 @@ pub fn pp_program<'a>(program: &'a Program, ctx: &'a Context) -> Doc<'a> { // pr
             declarations_of(|d| matches!(d, Def::Const { .. })), // + all constants
         ),
         section(
+            "debug symbols (original names, kept for EQY)", // "// debug symbols ..."
+            ctx.aliases // one line per alias:
+                .iter()
+                .map(|(symbol, signal)| {
+                    RcDoc::text("(* keep *) ") // keep: yosys must not remove it, EQY matches it by name
+                        .append(decl("wire", ctx.width(signal), symbol)) // "wire [3:0] total"
+                        .append(" = ") // " = "
+                        .append(signal.as_str()) // "ys_w3"
+                        .append(";") // ";"
+                })
+                .collect(),
+        ),
+        section(
             "instructions", // "// instructions"
             logic.into_iter().map(|i| pp_instruction(i, ctx)).collect(), // + every non-FINISH instruction
         ),
@@ -369,10 +435,16 @@ pub fn pp_program<'a>(program: &'a Program, ctx: &'a Context) -> Doc<'a> { // pr
         ),
         section(
             "system calls", // "// system calls"
-            finishes // + every FINISH
-                .into_iter() // go through them
-                .map(|i| pp_instruction(i, ctx)) // print each one
-                .collect(), // put them in a Vec
+            if finishes.is_empty() {
+                Vec::new() // no FINISH: leave the section out
+            } else {
+                // `ifndef SYNTHESIS: $finish is for simulation only. Yosys (and so EQY) defines
+                // SYNTHESIS, so it skips this part, exactly like the guard in the original design.
+                std::iter::once(RcDoc::text("`ifndef SYNTHESIS"))
+                    .chain(finishes.into_iter().map(|i| pp_instruction(i, ctx))) // every FINISH
+                    .chain(std::iter::once(RcDoc::text("`endif")))
+                    .collect()
+            },
         ),
     ]
     .into_iter() // go through the sections

@@ -36,7 +36,8 @@ preparation passes, `flatten`, the `manticore_*` lowering passes, and finally
 **2. MASM → Verilog** with this project:
 
 ```sh
-cargo run -- stepper.masm      # writes generated.sv in the current directory
+cargo run -- stepper.masm               # writes generated.sv in the current directory
+cargo run -- stepper.masm out.sv        # or choose the output file
 ```
 
 Errors (undeclared names, a signal assigned twice, ...) stop the program; width
@@ -45,14 +46,49 @@ mismatches are printed as warnings and generation continues.
 **3. Equivalence check**:
 
 ```sh
-eqy stepper.eqy                # [gold] = stepper.sv, [gate] = generated.sv
+eqy -f stepper.eqy             # [gold] = stepper.sv, [gate] = generated.sv
 ```
+
+**4. Full check (recommended)** — runs EQY on the real design *and* on broken copies:
+
+```sh
+cargo test                     # unit tests + "generated.sv is up to date"
+scripts/eqy_check.sh           # EQY: real design must PASS, 7 broken designs must FAIL
+scripts/sim_check.sh           # Icarus Verilog: same trace and same $finish time
+```
+
+## How the EQY check works (and why it used to pass for nothing)
+
+`Main` has no output ports. Yosys' `prep` removes every cell whose result nobody can
+see, so in the first version **both designs became empty modules** after `prep`
+(`gold.il` contained only the `clock` port), EQY made **0 partitions**, and reported
+"Successfully proved designs equivalent". Any `generated.sv`, also a wrong one, passed.
+
+The fix gives EQY something to compare, using the original names that the Manticore
+frontend already writes into the MASM:
+
+1. `@DEBUGSYMBOL [ symbol = "total" ]` before `.wire ys_w3 4` says that `ys_w3` is
+   `total` in `stepper.sv`. `build_program` attaches it to that def, and the generator
+   prints `(* keep *) wire [3:0] total = ys_w3;`.
+2. In `stepper.eqy` the gold design marks its own named wires `keep`
+   (`setattr -set keep 1 w:* w:$* %d` = all wires except auto-generated `$...` ones).
+3. Both sides now have kept wires `step` and `total`. EQY matches them by name and
+   makes one partition per signal (`Main.step`, `Main.total`): it proves that the
+   next-state logic of each register is the same in both designs.
+4. The partitions contain registers, so the `sat` strategy (Yosys `sat -tempinduct`,
+   no external solver needed) is used.
+
+**Always check that a PASS means something.** `scripts/eqy_check.sh` checks that
+`partition.list` is not empty and runs EQY on broken copies of `generated.sv`
+(`+` → `-`, MUX arms swapped, wrong constants, wrong PADZERO, register not updated,
+wrong initial value). Each must FAIL, and it does, in the partition you would expect.
 
 ## Files
 
 | File | What it does |
 |------|--------------|
 | `src/main.rs` | Entry point: read the file, parse, check, write `generated.sv`. |
+| `src/tests.rs` | Unit tests (`cargo test`). |
 | `src/masm.lalrpop` | The grammar. LALRPOP turns it into a Rust parser at build time. |
 | `src/ast.rs` | The data types a parsed program is stored in, plus `build_program`. |
 | `src/verilog.rs` | `Context` (checks + width table) and the `pp_*` printers that produce Verilog. |
@@ -61,6 +97,10 @@ eqy stepper.eqy                # [gold] = stepper.sv, [gate] = generated.sv
 | `stepper.masm` | Output of the Manticore frontend for `stepper.sv`. |
 | `generated.sv` | Output of this tool for `stepper.masm` (the "gate" design). |
 | `stepper.eqy` | EQY configuration comparing the two Verilog files. |
+| `scripts/eqy_check.sh` | EQY on the real design (must PASS) and on broken copies (must FAIL). |
+| `scripts/sim_check.sh` | Simulates both designs with `tests/tb_stepper.sv` and compares them, incl. `$finish`. |
+
+EQY and simulation work directories (`stepper/`, `build/`) are not committed.
 
 Every source file is commented line by line.
 
@@ -76,8 +116,9 @@ Every source file is commented line by line.
 | `SEQ rd, a, b` | `assign rd = a == b;` |
 | `MUX rd, sel, f, t` | `assign rd = sel ? t : f;` (note: MASM lists the *false* value first) |
 | `PADZERO rd, rs, 8` | `assign rd = {{N{1'b0}}, rs};` |
-| `(0) FINISH c` | `always @(*) if (c) $finish;` |
-| `@NAME [ key = "value" ]` | parsed, then ignored |
+| `(0) FINISH c` | `` `ifndef SYNTHESIS `` `always @(*) if (c) $finish;` `` `endif `` |
+| `@DEBUGSYMBOL [ symbol = "x" ]` before a def | `(* keep *) wire x = <that def>;` (skipped with a warning if `x` is not a plain identifier or already used) |
+| other `@NAME [ key = "value" ]` | parsed, then ignored |
 
 **Register naming.** A `.reg` has three names. `.input` is the flip-flop's Q (the
 value stored now, an *input* to the logic) and `.output` is its D (the value for
@@ -142,22 +183,18 @@ clock edge. That is why `always @(*) if (ys_w20) $finish;` behaves like the orig
 - Only the instructions in the table above are supported; anything else
   (memories, other ALU ops, `$display`, ...) is a parse error.
 - Annotations allow a single `key = "value"` pair and are not kept.
-- Constants are limited to 64 bits (`u64`).
+- Constants are limited to 64 bits (`u64`). A number that does not fit is a parse error,
+  and a `.const` value that does not fit in its declared width is an error.
 - One clock, named `clock`; module name is `Main`.
 
 ### `$finish` and EQY
 
-- **Not checked by EQY.** EQY compares the *logic* of the two designs. `$finish` is a
-  simulation command, not hardware, so whether the simulation stops at the right
-  moment is not covered by the equivalence check. To test that, run both designs in a
-  simulator (e.g. Icarus Verilog or Verilator) and compare when they stop.
-- **`` `ifndef SYNTHESIS `` guard.** In `stepper.sv`, the `$finish` is wrapped in
-  `` `ifndef SYNTHESIS `` / `` `endif ``. Yosys's `read_verilog` defines `SYNTHESIS` by
-  default, so that code is left out of the gold design. `verilog.rs` currently prints
-  `always @(*) if (c) $finish;` **without** this guard, so the gate design still
-  contains it. Depending on the Yosys version this can give warnings or errors. Until the
-  printer emits the guard itself, it has to be added to `generated.sv` by hand, and a
-  hand-edited file no longer matches what `cargo run` produces.
-- **Sanity check.** `Main` has no output ports, only `clock`. It is worth confirming that
-  EQY really compares the internal signals: change one line of `generated.sv` on purpose
-  (for example `+` to `-`) and check that EQY then reports the designs as *not* equivalent.
+- **Not checked by EQY.** `$finish` is a simulation command, not hardware. Yosys's
+  `read_verilog` defines `SYNTHESIS`, and both `stepper.sv` and `generated.sv` put the
+  `$finish` inside `` `ifndef SYNTHESIS ``, so EQY never sees it. (Changing the finish
+  condition in `generated.sv` still gives an EQY PASS.)
+- **Checked by simulation instead.** `scripts/sim_check.sh` runs both designs in Icarus
+  Verilog and compares `step`/`total` every cycle and the time `$finish` is called. It
+  also checks that a broken finish condition is detected.
+- The guard is now printed by the generator itself, so `generated.sv` is exactly what
+  `cargo run` produces (`cargo test` checks this).

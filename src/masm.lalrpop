@@ -1,6 +1,12 @@
 use crate::ast::*; // the module ast.rs and * means import everything
+use lalrpop_util::ParseError; // used by the `=>?` actions below to report our own errors
 
 grammar;
+
+// actions written with `=>?` may fail; their error is a String
+extern {
+    type Error = String;
+}
 
 // skip whitespace and // comments
 match {
@@ -12,7 +18,7 @@ match {
 
 // describes the whole program, which is a sequence of items(processes, annotations, definitions, instructions)
 pub Program: Program = {
-    ".prog" ":" <items:Item*> => build_program(items), 
+    ".prog" ":" <items:Item*> =>? build_program(items).map_err(|error| ParseError::User { error }),
     // the * means zero or more items (macro)
     // put them in a Vec<Item> called items
 };
@@ -32,12 +38,12 @@ Annotation: Annotation = {
 };
 
 Def: Def = {
-    ".wire" <name:Ident> <width:Num> =>
-        Def::Wire { name, width: width as u32 }, // Num produces a u64, but the field is u32
-    ".const" <name:Ident> <width:Num> <value:Num> =>
-        Def::Const { name, width: width as u32, value },
-    ".reg" <name:Ident> <width:Num> ".input" <current:Ident> <init:Num?> ".output" <next:Ident> => // the ? means optional, so init can be None
-        Def::Reg { name, width: width as u32, current, init, next },
+    ".wire" <name:Ident> <width:Width> =>
+        Def::Wire { name, width },
+    ".const" <name:Ident> <width:Width> <value:Num> =>
+        Def::Const { name, width, value },
+    ".reg" <name:Ident> <width:Width> ".input" <current:Ident> <init:Num?> ".output" <next:Ident> => // the ? means optional, so init can be None
+        Def::Reg { name, width, current, init, next },
 };
 
 Instruction: Instruction = {
@@ -53,10 +59,10 @@ Instruction: Instruction = {
         Instruction::Seq { rd, rs1, rs2 },
     "MUX" <rd:Ident> "," <sel:Ident> "," <rfalse:Ident> "," <rtrue:Ident> =>
         Instruction::Mux { rd, sel, rfalse, rtrue },
-    "PADZERO" <rd:Ident> "," <rs:Ident> "," <width:Num> =>
-        Instruction::PadZero { rd, rs, width: width as u32 },
-    "(" <order:Num> ")" "FINISH" <cond:Ident> =>
-        Instruction::Finish { order: order as u32, cond },
+    "PADZERO" <rd:Ident> "," <rs:Ident> "," <width:Width> =>
+        Instruction::PadZero { rd, rs, width },
+    "(" <order:Width> ")" "FINISH" <cond:Ident> =>
+        Instruction::Finish { order, cond },
 };
 
 // TOKENS
@@ -74,9 +80,20 @@ Str: String = <s:r#""[^"]*""#> => s[1..s.len() - 1].to_string(); // drop the quo
 // "[^"]*" means a quote, followed by zero or more non-quote characters, followed by a quote
 // s[1..s.len() - 1] drops the first and the last character
 
+// `=>?` actions return a Result: a number that is too big becomes a parse error
+// (with its position) instead of crashing the program with unwrap().
 Num: u64 = {
-    r"[0-9]+"  => <>.parse().unwrap(), // Decimal number
-    r"0b[01]+" => u64::from_str_radix(&<>[2..], 2).unwrap(), // Binary number
-    // &<>[2..] drops the 0b
+    <s:r"[0-9]+">  =>? s.parse().map_err(|_| ParseError::User { // Decimal number
+        error: format!("number `{s}` does not fit in 64 bits"),
+    }),
+    <s:r"0b[01]+"> =>? u64::from_str_radix(&s[2..], 2).map_err(|_| ParseError::User { // Binary number
+        error: format!("number `{s}` does not fit in 64 bits"),
+    }),
+    // &s[2..] drops the 0b
     // from_str_radix(..., 2) reads the rest as base 2
 };
+
+// a width (or FINISH order): a Num that must also fit in a u32
+Width: u32 = <n:Num> =>? u32::try_from(n).map_err(|_| ParseError::User {
+    error: format!("width `{n}` is too large"),
+});

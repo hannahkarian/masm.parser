@@ -1,7 +1,26 @@
+# Equivalence check: stepper.sv (gold) vs generated.sv (gate, made by masm_parser).
+#
+# Main has no output ports, so without help Yosys would delete all logic as unused
+# and EQY would "prove" two empty modules equal. To prevent this, the user-named
+# wires (step, total, ...) are marked `keep` in the gold design. The gate design
+# already has `(* keep *)` aliases with the same names, printed from @DEBUGSYMBOL.
+# EQY matches them by name and proves the logic between them.
+#
+# `w:* w:$* %d` = all wires minus the auto-generated `$...` ones.
+# Run scripts/eqy_check.sh, which also checks that broken designs FAIL.
+
 [gold]
 read_verilog -sv stepper.sv
+setattr -set keep 1 w:* w:$* %d
 prep -top Main
 
 [gate]
 read_verilog -sv generated.sv
 prep -top Main
+
+# The partitions contain registers, so a sequential proof is needed.
+# The `sat` strategy uses Yosys' own SAT solver (`sat -tempinduct`, induction over
+# `depth` clock cycles), so no external solver (yices, bitwuzla, ...) is required.
+[strategy sat]
+use sat
+depth 10

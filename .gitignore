@@ -2,3 +2,6 @@
 *.log
 .env
 .vscode/
+# EQY / simulation work directories
+/stepper/
+/build/

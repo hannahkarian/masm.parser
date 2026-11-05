@@ -32,6 +32,10 @@ module Main (
     localparam [1:0] ys_c3 = 2'b11;
     localparam ys_c4 = 1'b0;
 
+    // debug symbols (original names, kept for EQY)
+    (* keep *) wire [3:0] total = ys_w3;
+    (* keep *) wire [3:0] step = ys_w5;
+
     // instructions
     assign ys_w3 = ys_i1;
     assign ys_o2 = ys_w4;
@@ -59,6 +63,6 @@ module Main (
 
     // system calls
     `ifndef SYNTHESIS
-     always @(*) if (ys_w20) $finish; // (0) FINISH
+    always @(*) if (ys_w20) $finish; // (0) FINISH
     `endif
 endmodule

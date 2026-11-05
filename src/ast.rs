@@ -10,6 +10,15 @@ pub struct Process {
     pub name: String,                   // main
     pub defs: Vec<Def>,                 // .wire, .reg, .const
     pub instructions: Vec<Instruction>, // MOV, FINISH
+    pub debug_symbols: Vec<DebugSymbol>, // original names from @DEBUGSYMBOL annotations
+}
+
+// @DEBUGSYMBOL [ symbol = "total" ] written just before `.wire ys_w3 4`
+// means: the MASM signal ys_w3 is called `total` in the original Verilog.
+#[derive(Debug, PartialEq)]
+pub struct DebugSymbol {
+    pub symbol: String, // "total" (name in the original design)
+    pub signal: String, // "ys_w3" (name in the MASM)
 }
 
 #[derive(Debug)]
@@ -70,30 +79,60 @@ pub enum Item {
     Instruction(Instruction),
 }
 
+impl Def {
+    // the name an annotation in front of this def refers to
+    // (for a .reg that is the current value, the name the logic reads)
+    pub fn signal_name(&self) -> &str {
+        match self {
+            Def::Wire { name, .. } | Def::Const { name, .. } => name,
+            Def::Reg { current, .. } => current,
+        }
+    }
+}
+
 // groups values into a program
-pub fn build_program(items: Vec<Item>) -> Program {
+// Annotations are written *before* the item they describe, so they are collected in
+// `pending` and handed to the next item. Only @DEBUGSYMBOL on a def is kept for now.
+pub fn build_program(items: Vec<Item>) -> Result<Program, String> {
     let mut processes: Vec<Process> = Vec::new();
+    let mut pending: Vec<Annotation> = Vec::new(); // annotations waiting for their item
     for item in items {
-        match item {
-            // if it's ".proc main:", create a new empty Process and push it to the processes vector
-            Item::Proc(name) => processes.push(Process {
+        if let Item::Annotation(a) = item {
+            pending.push(a); // remember it until the next item
+            continue;
+        }
+        let annotations = std::mem::take(&mut pending); // the annotations that belong to this item
+        if let Item::Proc(name) = item {
+            // ".proc main:" starts a new empty Process
+            processes.push(Process {
                 name,
                 defs: Vec::new(),
                 instructions: Vec::new(),
-            }),
-            // if it's a Def, push it to the defs vector of the last Process in processes
-            Item::Def(d) => processes
-                .last_mut() // Optional<&mut Process> a mutable reference to the last process, or None if the list is empty
-                .expect("def outside .proc")
-                .defs
-                .push(d), // adds the definition to that process's list
-            Item::Instruction(i) => processes
-                .last_mut()
-                .expect("instruction outside .proc")
-                .instructions
-                .push(i),
-            Item::Annotation(_) => {} // ignored for now
+                debug_symbols: Vec::new(),
+            });
+            continue;
+        }
+        // defs and instructions go into the last Process; error if there is none yet
+        let process = processes
+            .last_mut()
+            .ok_or_else(|| "definition or instruction outside .proc".to_string())?;
+        match item {
+            Item::Def(d) => {
+                for a in annotations.iter().filter(|a| a.name == "DEBUGSYMBOL") {
+                    for (key, value) in &a.fields {
+                        if key == "symbol" {
+                            process.debug_symbols.push(DebugSymbol {
+                                symbol: value.clone(),
+                                signal: d.signal_name().to_string(),
+                            });
+                        }
+                    }
+                }
+                process.defs.push(d);
+            }
+            Item::Instruction(i) => process.instructions.push(i), // annotations ignored for now
+            Item::Proc(_) | Item::Annotation(_) => unreachable!(), // handled above
         }
     }
-    Program { processes }
+    Ok(Program { processes })
 }

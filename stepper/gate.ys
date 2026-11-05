@@ -1,6 +1,0 @@
-read_verilog -sv generated.sv
-prep -top Main
-opt_clean
-check -initdrv
-setundef -undriven -undef
-write_rtlil stepper/gate.il
