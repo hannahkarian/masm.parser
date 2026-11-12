@@ -1,0 +1,18 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo test
+      # generated.sv is what EQY checks, so it must never be stale or hand-edited.
+      - name: generated.sv is up to date
+        run: |
+          cargo run -- stepper.masm generated.sv
+          git diff --exit-code generated.sv

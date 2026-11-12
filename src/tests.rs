@@ -1,7 +1,6 @@
-// Unit tests: `cargo test`
 use crate::{masm, verilog};
 
-// parse + check + print; Err(messages) if parsing or checking fails
+/// Parse, check and print: `Ok((verilog, warnings))` or `Err(messages)`.
 fn generate(text: &str) -> Result<(String, Vec<String>), Vec<String>> {
     let program = masm::ProgramParser::new()
         .parse(text)
@@ -11,7 +10,7 @@ fn generate(text: &str) -> Result<(String, Vec<String>), Vec<String>> {
     Ok((verilog::render(&program, &ctx), warnings))
 }
 
-// wrap a few lines in a .prog/.proc header
+/// Wraps a few lines in a `.prog`/`.proc` header.
 fn prog(body: &str) -> String {
     format!(".prog:\n.proc main:\n{body}\n")
 }
@@ -22,23 +21,6 @@ fn errors(body: &str) -> Vec<String> {
 
 fn verilog_of(body: &str) -> String {
     generate(&prog(body)).expect("expected no error").0
-}
-
-// The committed generated.sv must be exactly what the tool produces for stepper.masm,
-// so the file EQY checks is never a hand-edited one.
-#[test]
-fn stepper_matches_committed_generated_sv() {
-    let program = masm::ProgramParser::new()
-        .parse(include_str!("../stepper.masm"))
-        .unwrap();
-    let mut ctx = verilog::Context::new(&program, "Main", "clock").unwrap();
-    ctx.source = Some("stepper.masm".to_string());
-    assert!(ctx.warnings.is_empty(), "{:?}", ctx.warnings);
-    assert_eq!(
-        verilog::render(&program, &ctx),
-        include_str!("../generated.sv"),
-        "generated.sv is out of date: run `cargo run -- stepper.masm`"
-    );
 }
 
 #[test]
@@ -86,13 +68,15 @@ fn no_guard_without_finish() {
 
 #[test]
 fn debug_symbol_becomes_a_kept_alias() {
-    let v = verilog_of("@DEBUGSYMBOL [ symbol = \"total\" ]\n.wire ys_w3 4\n.wire a 4\nMOV ys_w3, a;");
+    let v =
+        verilog_of("@DEBUGSYMBOL [ symbol = \"total\" ]\n.wire ys_w3 4\n.wire a 4\nMOV ys_w3, a;");
     assert!(v.contains("(* keep *) wire [3:0] total = ys_w3;"), "{v}");
 }
 
 #[test]
 fn debug_symbol_on_a_reg_names_its_current_value() {
-    let v = verilog_of("@DEBUGSYMBOL [ symbol = \"cnt\" ]\n.reg r 2 .input q 0b0 .output d\nMOV d, q;");
+    let v =
+        verilog_of("@DEBUGSYMBOL [ symbol = \"cnt\" ]\n.reg r 2 .input q 0b0 .output d\nMOV d, q;");
     assert!(v.contains("(* keep *) wire [1:0] cnt = q;"), "{v}");
 }
 
@@ -122,33 +106,52 @@ fn bad_debug_symbols_are_skipped_with_a_warning() {
 #[test]
 fn duplicate_declaration_is_an_error() {
     let e = errors(".wire a 1\n.wire a 1");
-    assert!(e.iter().any(|m| m.contains("declared more than once")), "{e:?}");
+    assert!(
+        e.iter().any(|m| m.contains("declared more than once")),
+        "{e:?}"
+    );
 }
 
 #[test]
 fn two_drivers_is_an_error() {
     let e = errors(".wire a 1\n.wire b 1\nMOV a, b;\nMOV a, b;");
-    assert!(e.iter().any(|m| m.contains("more than one instruction")), "{e:?}");
+    assert!(
+        e.iter().any(|m| m.contains("more than one instruction")),
+        "{e:?}"
+    );
 }
 
 #[test]
 fn undeclared_name_is_an_error() {
     let e = errors(".wire a 1\nMOV a, nope;");
-    assert!(e.iter().any(|m| m.contains("`nope` is used but never declared")), "{e:?}");
+    assert!(
+        e.iter()
+            .any(|m| m.contains("`nope` is used but never declared")),
+        "{e:?}"
+    );
 }
 
 #[test]
 fn writing_a_constant_or_register_output_is_an_error() {
     let e = errors(".const c 1 0b1\n.wire a 1\nMOV c, a;");
-    assert!(e.iter().any(|m| m.contains("cannot be the destination")), "{e:?}");
+    assert!(
+        e.iter().any(|m| m.contains("cannot be the destination")),
+        "{e:?}"
+    );
     let e = errors(".reg r 1 .input q .output d\n.wire a 1\nMOV q, a;");
-    assert!(e.iter().any(|m| m.contains("cannot be the destination")), "{e:?}");
+    assert!(
+        e.iter().any(|m| m.contains("cannot be the destination")),
+        "{e:?}"
+    );
 }
 
 #[test]
 fn constant_too_wide_for_its_width_is_an_error() {
     let e = errors(".const c 2 0b111");
-    assert!(e.iter().any(|m| m.contains("does not fit in 2 bits")), "{e:?}");
+    assert!(
+        e.iter().any(|m| m.contains("does not fit in 2 bits")),
+        "{e:?}"
+    );
     // the largest value that fits is fine, also for 64 bits
     verilog_of(".const c 2 0b11");
     verilog_of(".const c 64 18446744073709551615");

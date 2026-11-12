@@ -52,7 +52,7 @@ eqy -f stepper.eqy             # [gold] = stepper.sv, [gate] = generated.sv
 **4. Full check (recommended)** — runs EQY on the real design *and* on broken copies:
 
 ```sh
-cargo test                     # unit tests + "generated.sv is up to date"
+cargo test                     # unit tests
 scripts/eqy_check.sh           # EQY: real design must PASS, 7 broken designs must FAIL
 scripts/sim_check.sh           # Icarus Verilog: same trace and same $finish time
 ```
@@ -92,6 +92,7 @@ wrong initial value). Each must FAIL, and it does, in the partition you would ex
 | `src/masm.lalrpop` | The grammar. LALRPOP turns it into a Rust parser at build time. |
 | `src/ast.rs` | The data types a parsed program is stored in, plus `build_program`. |
 | `src/verilog.rs` | `Context` (checks + width table) and the `pp_*` printers that produce Verilog. |
+| `.github/workflows/ci.yml` | CI: runs the unit tests and checks that the committed `generated.sv` is up to date. |
 | `build.rs` | Runs LALRPOP before compiling, so the parser is always up to date. |
 | `stepper.sv` | Small example design (the reference / "gold" design). |
 | `stepper.masm` | Output of the Manticore frontend for `stepper.sv`. |
@@ -197,4 +198,4 @@ clock edge. That is why `always @(*) if (ys_w20) $finish;` behaves like the orig
   Verilog and compares `step`/`total` every cycle and the time `$finish` is called. It
   also checks that a broken finish condition is detected.
 - The guard is now printed by the generator itself, so `generated.sv` is exactly what
-  `cargo run` produces (`cargo test` checks this).
+  `cargo run` produces (CI regenerates it and fails if the committed file differs).
