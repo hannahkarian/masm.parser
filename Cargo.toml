@@ -8,4 +8,5 @@ lalrpop = "0.23.1"
 
 [dependencies]
 lalrpop-util = { version = "0.23.1", features = ["lexer", "unicode"] }
+num-bigint = "0.4"
 pretty = "0.12"

@@ -1,5 +1,6 @@
 use crate::ast::*;
 use lalrpop_util::ParseError;
+use num_bigint::BigUint;
 
 grammar;
 
@@ -17,8 +18,11 @@ match {
 }
 
 pub Program: Program = {
-    ".prog" ":" <items:Item*> =>? build_program(items).map_err(|error| ParseError::User { error }),
+    ".prog" ":" <items:Items> =>? build_program(items).map_err(|error| ParseError::User { error }),
 };
+
+// Public so the tests can look at annotations before build_program drops them.
+pub Items: Vec<Item> = Item*;
 
 Item: Item = {
     ".proc" <name:Ident> ":"  => Item::Proc(name),
@@ -27,11 +31,29 @@ Item: Item = {
     <i:Instruction> ";"       => Item::Instruction(i),
 };
 
-// @SOURCEINFO [ file = "..." ]
-// MASM allows several comma-separated key = value pairs; only one is supported here.
+// @MEMBLOCK [ block = "mem", width = 8, capacity = 16 ]
+// The bracketed list is optional, as in the Scala parser.
 Annotation: Annotation = {
-    <name:AnnotName> "[" <key:Ident> "=" <value:Str> "]" =>
-        Annotation { name, fields: vec![(key, value)] },
+    <name:AnnotName> <fields:("[" <Comma<KeyValue>> "]")?> =>
+        Annotation { name, fields: fields.unwrap_or_default() },
+};
+
+KeyValue: (String, AnnotationValue) = <Ident> "=" <AnnotationValue>;
+
+AnnotationValue: AnnotationValue = {
+    <Str> => AnnotationValue::Str(<>),
+    <n:Num> =>? u64::try_from(&n).map(AnnotationValue::Int).map_err(|_| ParseError::User {
+        error: format!("annotation value `{n}` does not fit in 64 bits"),
+    }),
+};
+
+// Zero or more T separated by commas, without a trailing comma.
+Comma<T>: Vec<T> = {
+    => Vec::new(),
+    <mut v:(<T> ",")*> <last:T> => {
+        v.push(last);
+        v
+    },
 };
 
 Def: Def = {
@@ -61,22 +83,20 @@ Instruction: Instruction = {
 Ident: String = r"[A-Za-z_][A-Za-z0-9_]*" => <>.to_string();
 
 // The name without the leading `@`.
-AnnotName: String = r"@[A-Za-z_]+" => <>[1..].to_string();
+AnnotName: String = r"@[A-Za-z_][A-Za-z0-9_]*" => <>[1..].to_string();
 
 // The contents without the surrounding quotes.
 Str: String = <s:r#""[^"]*""#> => s[1..s.len() - 1].to_string();
 
-// A number that is too big becomes a parse error (with its position) instead of a panic.
-Num: u64 = {
-    <s:r"[0-9]+">  =>? s.parse().map_err(|_| ParseError::User {
-        error: format!("number `{s}` does not fit in 64 bits"),
-    }),
-    <s:r"0b[01]+"> =>? u64::from_str_radix(&s[2..], 2).map_err(|_| ParseError::User {
-        error: format!("number `{s}` does not fit in 64 bits"),
-    }),
+// Arbitrarily large: constants and register init values can be wider than 64 bits.
+// The unwraps cannot fail, the regexes only let valid digits through.
+Num: BigUint = {
+    <s:r"[0-9]+">         => BigUint::parse_bytes(s.as_bytes(), 10).unwrap(),
+    <s:r"0b[01]+">        => BigUint::parse_bytes(s[2..].as_bytes(), 2).unwrap(),
+    <s:r"0x[0-9a-fA-F]+"> => BigUint::parse_bytes(s[2..].as_bytes(), 16).unwrap(),
 };
 
 // A width (or FINISH order).
-Width: u32 = <n:Num> =>? u32::try_from(n).map_err(|_| ParseError::User {
+Width: u32 = <n:Num> =>? u32::try_from(&n).map_err(|_| ParseError::User {
     error: format!("width `{n}` is too large"),
 });

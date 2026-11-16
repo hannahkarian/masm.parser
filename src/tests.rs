@@ -158,11 +158,101 @@ fn constant_too_wide_for_its_width_is_an_error() {
 }
 
 #[test]
-fn too_big_numbers_are_parse_errors_not_panics() {
-    let e = errors(".const c 65 18446744073709551616");
-    assert!(e[0].contains("does not fit in 64 bits"), "{e:?}");
+fn constants_and_init_values_can_be_wider_than_64_bits() {
+    // 2^64 needs 65 bits
+    let v = verilog_of(".const c 65 18446744073709551616");
+    assert!(
+        v.contains(&format!("localparam [64:0] c = 65'b1{};", "0".repeat(64))),
+        "{v}"
+    );
+    let e = errors(".const c 64 18446744073709551616");
+    assert!(
+        e.iter().any(|m| m.contains("does not fit in 64 bits")),
+        "{e:?}"
+    );
+
+    let v = verilog_of(&format!(
+        ".reg r 70 .input q 0b1{} .output d\nMOV d, q;",
+        "0".repeat(69)
+    ));
+    assert!(
+        v.contains(&format!("reg [69:0] q = 70'b1{};", "0".repeat(69))),
+        "{v}"
+    );
+}
+
+#[test]
+fn hex_decimal_and_binary_numbers_agree() {
+    let v = verilog_of(".const a 8 0xfF\n.const b 8 255\n.const c 8 0b11111111");
+    assert_eq!(v.matches("= 8'b11111111;").count(), 3, "{v}");
+    // also as a width
+    let v = verilog_of(".wire w 0x10");
+    assert!(v.contains("wire [15:0] w;"), "{v}");
+}
+
+#[test]
+fn too_big_width_is_a_parse_error_not_a_panic() {
     let e = errors(".wire w 4294967296");
     assert!(e[0].contains("too large"), "{e:?}");
+}
+
+#[test]
+fn annotations_take_several_string_and_integer_fields() {
+    use crate::ast::AnnotationValue::{Int, Str};
+    let items = masm::ItemsParser::new()
+        .parse("@MEMBLOCK [block = \"m\", width = 8, capacity = 0x10]\n@MEMINIT [ file = \"m.hex\", count = 0b11, width = 8 ]\n@TRACK\n@EMPTY [ ]")
+        .unwrap();
+    let fields: Vec<_> = items
+        .into_iter()
+        .map(|item| match item {
+            crate::ast::Item::Annotation(a) => (a.name, a.fields),
+            other => panic!("not an annotation: {other:?}"),
+        })
+        .collect();
+    let key = |k: &str| k.to_string();
+    assert_eq!(
+        fields,
+        vec![
+            (
+                key("MEMBLOCK"),
+                vec![
+                    (key("block"), Str(key("m"))),
+                    (key("width"), Int(8)),
+                    (key("capacity"), Int(16))
+                ]
+            ),
+            (
+                key("MEMINIT"),
+                vec![
+                    (key("file"), Str(key("m.hex"))),
+                    (key("count"), Int(3)),
+                    (key("width"), Int(8))
+                ]
+            ),
+            (key("TRACK"), vec![]),
+            (key("EMPTY"), vec![]),
+        ]
+    );
+}
+
+#[test]
+fn malformed_annotations_are_parse_errors() {
+    for body in [
+        "@A [ k = 1, ]\n.wire w 1",
+        "@A [ k ]\n.wire w 1",
+        "@A [ k = 1 j = 2 ]\n.wire w 1",
+        "@A [ k = 18446744073709551616 ]\n.wire w 1",
+    ] {
+        assert!(generate(&prog(body)).is_err(), "{body}");
+    }
+}
+
+#[test]
+fn debug_symbol_is_found_among_other_fields() {
+    let v = verilog_of(
+        "@DEBUGSYMBOL [ width = 4, symbol = \"total\" ]\n.wire w 4\n.wire a 4\nMOV w, a;",
+    );
+    assert!(v.contains("(* keep *) wire [3:0] total = w;"), "{v}");
 }
 
 #[test]

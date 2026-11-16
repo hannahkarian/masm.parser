@@ -1,5 +1,7 @@
 #![allow(dead_code)] // some fields are only printed for now
 
+use num_bigint::BigUint;
+
 #[derive(Debug)]
 pub struct Program {
     pub processes: Vec<Process>,
@@ -22,11 +24,17 @@ pub struct DebugSymbol {
     pub signal: String,
 }
 
-/// `@SOURCEINFO [ file = "finish.sv:4.9-4.16" ]`
+/// `@MEMBLOCK [ block = "mem", width = 8, capacity = 16 ]`
 #[derive(Debug)]
 pub struct Annotation {
     pub name: String,
-    pub fields: Vec<(String, String)>,
+    pub fields: Vec<(String, AnnotationValue)>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum AnnotationValue {
+    Str(String),
+    Int(u64),
 }
 
 #[derive(Debug)]
@@ -37,7 +45,7 @@ pub enum Def {
     Const {
         name: String,
         width: u32,
-        value: u64,
+        value: BigUint,
     },
     /// `.reg ys_r0 1 .input ys_i1 0b0 .output ys_o2`
     ///
@@ -47,7 +55,7 @@ pub enum Def {
         name: String,
         width: u32,
         current: String,
-        init: Option<u64>,
+        init: Option<BigUint>,
         next: String,
     },
 }
@@ -130,9 +138,9 @@ pub fn build_program(items: Vec<Item>) -> Result<Program, String> {
             Item::Def(d) => {
                 for a in annotations.iter().filter(|a| a.name == "DEBUGSYMBOL") {
                     for (key, value) in &a.fields {
-                        if key == "symbol" {
+                        if let ("symbol", AnnotationValue::Str(symbol)) = (key.as_str(), value) {
                             process.debug_symbols.push(DebugSymbol {
-                                symbol: value.clone(),
+                                symbol: symbol.clone(),
                                 signal: d.signal_name().to_string(),
                             });
                         }

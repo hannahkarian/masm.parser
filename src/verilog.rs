@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use num_bigint::BigUint;
 use pretty::RcDoc;
 
 use crate::ast::{Def, Instruction, Program};
@@ -64,8 +65,7 @@ impl Context {
                     ],
                 };
                 if let Def::Const { name, width, value } = def {
-                    // `width < 64` first: shifting a u64 by 64 or more panics.
-                    if *width < 64 && *value >> *width != 0 {
+                    if value.bits() > u64::from(*width) {
                         errors.push(format!(
                             "constant `{name}` value {value:#b} does not fit in {width} bits"
                         ));
@@ -269,7 +269,7 @@ fn range(width: u32) -> String {
 }
 
 /// A sized binary literal: `(4, 2)` -> `4'b0010`.
-fn literal(width: u32, value: u64) -> String {
+fn literal(width: u32, value: &BigUint) -> String {
     format!("{width}'b{value:0w$b}", w = width as usize)
 }
 
@@ -331,7 +331,7 @@ pub fn pp_declaration<'a>(def: &'a Def, _ctx: &Context) -> Doc<'a> {
         Def::Wire { name, width } => decl("wire", *width, name).append(";"),
         Def::Const { name, width, value } => decl("localparam", *width, name)
             .append(" = ")
-            .append(literal(*width, *value))
+            .append(literal(*width, value))
             .append(";"),
         // A register becomes a `reg` named after its current value and a `wire`
         // for its next value; the register's own name only survives as a comment.
@@ -344,7 +344,7 @@ pub fn pp_declaration<'a>(def: &'a Def, _ctx: &Context) -> Doc<'a> {
         } => {
             let reg = decl("reg", *width, current);
             let reg = match init {
-                Some(value) => reg.append(" = ").append(literal(*width, *value)),
+                Some(value) => reg.append(" = ").append(literal(*width, value)),
                 None => reg,
             };
             reg.append(format!("; // {name}: current value"))
