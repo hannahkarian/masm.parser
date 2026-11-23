@@ -44,6 +44,41 @@ fn add_and_seq() {
 }
 
 #[test]
+fn plain_alu_operations() {
+    let ops = [
+        ("ADD", "+"),
+        ("SUB", "-"),
+        ("MUL", "*"),
+        ("AND", "&"),
+        ("OR", "|"),
+        ("XOR", "^"),
+    ];
+    for (masm, verilog) in ops {
+        let v = verilog_of(&format!(".wire a 4\n.wire b 4\n.wire d 4\n{masm} d, a, b;"));
+        // operand order matters for SUB
+        assert!(
+            v.contains(&format!("assign d = a {verilog} b;")),
+            "{masm}: {v}"
+        );
+
+        let (_, w) = generate(&prog(&format!(
+            ".wire a 4\n.wire b 2\n.wire d 4\n{masm} d, a, b;"
+        )))
+        .unwrap();
+        let expected = format!("{masm} operands differ in width");
+        assert!(w.iter().any(|m| m.contains(&expected)), "{masm}: {w:?}");
+    }
+}
+
+#[test]
+fn alu_operations_need_all_three_operands() {
+    for body in ["SUB d, a;", "XOR d, a, b, a;", "MUL d a b;"] {
+        let body = format!(".wire a 4\n.wire b 4\n.wire d 4\n{body}");
+        assert!(generate(&prog(&body)).is_err(), "{body}");
+    }
+}
+
+#[test]
 fn register_is_updated_on_the_clock() {
     let v = verilog_of(".reg r 4 .input q 0b0101 .output d\nMOV d, q;");
     assert!(v.contains("reg [3:0] q = 4'b0101;"), "{v}");

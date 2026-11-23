@@ -68,8 +68,8 @@ Def: Def = {
 Instruction: Instruction = {
     "MOV" <rd:Ident> "," <rs:Ident> =>
         Instruction::Mov { rd, rs },
-    "ADD" <rd:Ident> "," <rs1:Ident> "," <rs2:Ident> =>
-        Instruction::Add { rd, rs1, rs2 },
+    <op:BinaryOp> <rd:Ident> "," <rs1:Ident> "," <rs2:Ident> =>
+        Instruction::Binary { op, rd, rs1, rs2 },
     "SEQ" <rd:Ident> "," <rs1:Ident> "," <rs2:Ident> =>
         Instruction::Seq { rd, rs1, rs2 },
     "MUX" <rd:Ident> "," <sel:Ident> "," <rfalse:Ident> "," <rtrue:Ident> =>
@@ -78,6 +78,16 @@ Instruction: Instruction = {
         Instruction::PadZero { rd, rs, width },
     "(" <order:Width> ")" "FINISH" <cond:Ident> =>
         Instruction::Finish { order, cond },
+};
+
+// The ALU operations that all look like `OP rd, rs1, rs2` with equal widths.
+BinaryOp: BinaryOp = {
+    "ADD" => BinaryOp::Add,
+    "SUB" => BinaryOp::Sub,
+    "MUL" => BinaryOp::Mul,
+    "AND" => BinaryOp::And,
+    "OR"  => BinaryOp::Or,
+    "XOR" => BinaryOp::Xor,
 };
 
 Ident: String = r"[A-Za-z_][A-Za-z0-9_]*" => <>.to_string();

@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use num_bigint::BigUint;
 use pretty::RcDoc;
 
-use crate::ast::{Def, Instruction, Program};
+use crate::ast::{BinaryOp, Def, Instruction, Program};
 
 pub type Doc<'a> = RcDoc<'a, ()>;
 
@@ -167,13 +167,15 @@ impl Context {
     fn check_widths(&mut self, instr: &Instruction) {
         let w = |n: &String| self.width(n);
         // Each arm's guard is the condition under which the instruction is wrong.
-        let problem = match instr {
-            Instruction::Mov { rd, rs } if w(rd) != w(rs) => Some("MOV operands differ in width"),
-            Instruction::Add { rd, rs1, rs2 } if w(rd) != w(rs1) || w(rd) != w(rs2) => {
-                Some("ADD operands differ in width")
+        let problem: Option<String> = match instr {
+            Instruction::Mov { rd, rs } if w(rd) != w(rs) => {
+                Some("MOV operands differ in width".to_string())
+            }
+            Instruction::Binary { op, rd, rs1, rs2 } if w(rd) != w(rs1) || w(rd) != w(rs2) => {
+                Some(format!("{} operands differ in width", op.mnemonic()))
             }
             Instruction::Seq { rd, rs1, rs2 } if w(rd) != 1 || w(rs1) != w(rs2) => {
-                Some("SEQ needs a 1-bit result and equal-width operands")
+                Some("SEQ needs a 1-bit result and equal-width operands".to_string())
             }
             Instruction::Mux {
                 rd,
@@ -181,13 +183,13 @@ impl Context {
                 rfalse,
                 rtrue,
             } if w(sel) != 1 || w(rd) != w(rfalse) || w(rd) != w(rtrue) => {
-                Some("MUX needs a 1-bit select and equal-width data")
+                Some("MUX needs a 1-bit select and equal-width data".to_string())
             }
             Instruction::PadZero { rd, rs, width } if w(rd) != *width || w(rs) > *width => {
-                Some("PADZERO width does not match its operands")
+                Some("PADZERO width does not match its operands".to_string())
             }
             Instruction::Finish { cond, .. } if w(cond) != 1 => {
-                Some("FINISH condition is not 1 bit")
+                Some("FINISH condition is not 1 bit".to_string())
             }
             _ => None,
         };
@@ -237,7 +239,9 @@ fn is_simple_identifier(name: &str) -> bool {
 fn operands(instr: &Instruction) -> Vec<&String> {
     match instr {
         Instruction::Mov { rd, rs } | Instruction::PadZero { rd, rs, .. } => vec![rd, rs],
-        Instruction::Add { rd, rs1, rs2 } | Instruction::Seq { rd, rs1, rs2 } => vec![rd, rs1, rs2],
+        Instruction::Binary { rd, rs1, rs2, .. } | Instruction::Seq { rd, rs1, rs2 } => {
+            vec![rd, rs1, rs2]
+        }
         Instruction::Mux {
             rd,
             sel,
@@ -251,7 +255,7 @@ fn operands(instr: &Instruction) -> Vec<&String> {
 fn destination(instr: &Instruction) -> Option<&str> {
     match instr {
         Instruction::Mov { rd, .. }
-        | Instruction::Add { rd, .. }
+        | Instruction::Binary { rd, .. }
         | Instruction::Seq { rd, .. }
         | Instruction::Mux { rd, .. }
         | Instruction::PadZero { rd, .. } => Some(rd),
@@ -289,6 +293,19 @@ fn assign<'a>(rd: &'a str, expr: Doc<'a>) -> Doc<'a> {
         .append(RcDoc::line().append(expr).nest(INDENT))
         .append(";")
         .group()
+}
+
+/// The Verilog operator for a MASM operation. All operands are unsigned and as wide
+/// as the result, so `-` and `*` wrap around exactly like SUB and MUL do.
+fn operator(op: BinaryOp) -> &'static str {
+    match op {
+        BinaryOp::Add => "+",
+        BinaryOp::Sub => "-",
+        BinaryOp::Mul => "*",
+        BinaryOp::And => "&",
+        BinaryOp::Or => "|",
+        BinaryOp::Xor => "^",
+    }
 }
 
 /// `lhs op rhs`
@@ -358,7 +375,7 @@ pub fn pp_declaration<'a>(def: &'a Def, _ctx: &Context) -> Doc<'a> {
 pub fn pp_instruction<'a>(instr: &'a Instruction, ctx: &Context) -> Doc<'a> {
     match instr {
         Instruction::Mov { rd, rs } => assign(rd, RcDoc::text(rs.as_str())),
-        Instruction::Add { rd, rs1, rs2 } => assign(rd, binary(rs1, "+", rs2)),
+        Instruction::Binary { op, rd, rs1, rs2 } => assign(rd, binary(rs1, operator(*op), rs2)),
         Instruction::Seq { rd, rs1, rs2 } => assign(rd, binary(rs1, "==", rs2)),
         // MASM lists the false value first, Verilog's `?:` the true value.
         Instruction::Mux {

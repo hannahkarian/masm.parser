@@ -12,7 +12,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: cargo test
       # generated.sv is what EQY checks, so it must never be stale or hand-edited.
-      - name: generated.sv is up to date
+      - name: generated files are up to date
         run: |
           cargo run -- stepper.masm generated.sv
-          git diff --exit-code generated.sv
+          cargo run -- alu.masm alu_generated.sv
+          git diff --exit-code generated.sv alu_generated.sv

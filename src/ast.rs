@@ -60,12 +60,40 @@ pub enum Def {
     },
 }
 
+/// The ALU operations whose operands and result all have the same width.
+/// (SEQ and the shifts are not in here: their widths follow other rules.)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BinaryOp {
+    Add,
+    Sub,
+    Mul,
+    And,
+    Or,
+    Xor,
+}
+
+impl BinaryOp {
+    /// The name in the MASM file.
+    pub fn mnemonic(self) -> &'static str {
+        match self {
+            BinaryOp::Add => "ADD",
+            BinaryOp::Sub => "SUB",
+            BinaryOp::Mul => "MUL",
+            BinaryOp::And => "AND",
+            BinaryOp::Or => "OR",
+            BinaryOp::Xor => "XOR",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Instruction {
     /// `MOV rd, rs;`
     Mov { rd: String, rs: String },
-    /// `ADD rd, rs1, rs2;`
-    Add {
+    /// `ADD rd, rs1, rs2;` and the other operations in `BinaryOp`:
+    /// `rd = rs1 <op> rs2`, all three the same width.
+    Binary {
+        op: BinaryOp,
         rd: String,
         rs1: String,
         rs2: String,

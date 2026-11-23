@@ -1,0 +1,19 @@
+# Equivalence check: alu.sv (gold) vs alu_generated.sv (gate, made by masm_parser).
+# Same setup as stepper.eqy (see the comments there); the differences are:
+#
+# -DEQY removes the $finish from the gold design, which Yosys cannot read. alu.sv
+# cannot use `ifndef SYNTHESIS for that: the Manticore frontend defines SYNTHESIS
+# too and would then produce no MASM at all.
+
+[gold]
+read_verilog -sv -DEQY alu.sv
+setattr -set keep 1 w:* w:$* %d
+prep -top Main
+
+[gate]
+read_verilog -sv alu_generated.sv
+prep -top Main
+
+[strategy sat]
+use sat
+depth 10

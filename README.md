@@ -47,13 +47,14 @@ mismatches are printed as warnings and generation continues.
 
 ```sh
 eqy -f stepper.eqy             # [gold] = stepper.sv, [gate] = generated.sv
+eqy -f alu.eqy                 # [gold] = alu.sv,     [gate] = alu_generated.sv
 ```
 
 **4. Full check (recommended)** — runs EQY on the real design *and* on broken copies:
 
 ```sh
 cargo test                     # unit tests
-scripts/eqy_check.sh           # EQY: real design must PASS, 7 broken designs must FAIL
+scripts/eqy_check.sh           # EQY on stepper and alu: real designs must PASS, 13 broken copies must FAIL
 scripts/sim_check.sh           # Icarus Verilog: same trace and same $finish time
 ```
 
@@ -81,7 +82,9 @@ frontend already writes into the MASM:
 **Always check that a PASS means something.** `scripts/eqy_check.sh` checks that
 `partition.list` is not empty and runs EQY on broken copies of `generated.sv`
 (`+` → `-`, MUX arms swapped, wrong constants, wrong PADZERO, register not updated,
-wrong initial value). Each must FAIL, and it does, in the partition you would expect.
+wrong initial value), and of `alu_generated.sv` (each of SUB, MUL, AND, OR, XOR
+replaced by another operation, and SUB with its operands swapped). Each must FAIL,
+and it does, in the partition you would expect.
 
 ## Files
 
@@ -92,16 +95,17 @@ wrong initial value). Each must FAIL, and it does, in the partition you would ex
 | `src/masm.lalrpop` | The grammar. LALRPOP turns it into a Rust parser at build time. |
 | `src/ast.rs` | The data types a parsed program is stored in, plus `build_program`. |
 | `src/verilog.rs` | `Context` (checks + width table) and the `pp_*` printers that produce Verilog. |
-| `.github/workflows/ci.yml` | CI: runs the unit tests and checks that the committed `generated.sv` is up to date. |
+| `.github/workflows/ci.yml` | CI: runs the unit tests and checks that the committed `generated.sv` and `alu_generated.sv` are up to date. |
 | `build.rs` | Runs LALRPOP before compiling, so the parser is always up to date. |
 | `stepper.sv` | Small example design (the reference / "gold" design). |
 | `stepper.masm` | Output of the Manticore frontend for `stepper.sv`. |
 | `generated.sv` | Output of this tool for `stepper.masm` (the "gate" design). |
 | `stepper.eqy` | EQY configuration comparing the two Verilog files. |
-| `scripts/eqy_check.sh` | EQY on the real design (must PASS) and on broken copies (must FAIL). |
+| `alu.sv`, `alu.masm`, `alu_generated.sv`, `alu.eqy` | The same four files for a second design, which tests SUB, MUL, AND, OR and XOR. |
+| `scripts/eqy_check.sh` | EQY on each real design, stepper and alu (must PASS), and on broken copies (must FAIL). |
 | `scripts/sim_check.sh` | Simulates both designs with `tests/tb_stepper.sv` and compares them, incl. `$finish`. |
 
-EQY and simulation work directories (`stepper/`, `build/`) are not committed.
+EQY and simulation work directories (`stepper/`, `alu/`, `build/`) are not committed.
 
 Every source file is commented line by line.
 
@@ -114,12 +118,21 @@ Every source file is commented line by line.
 | `.reg r 8 .input cur 0b0 .output nxt` | `reg [7:0] cur = 8'b0;` + `wire [7:0] nxt;` + `cur <= nxt;` on the clock edge |
 | `MOV rd, rs` | `assign rd = rs;` |
 | `ADD rd, a, b` | `assign rd = a + b;` |
+| `SUB rd, a, b` | `assign rd = a - b;` |
+| `MUL rd, a, b` | `assign rd = a * b;` |
+| `AND rd, a, b` | `assign rd = a & b;` |
+| `OR rd, a, b` | `assign rd = a \| b;` |
+| `XOR rd, a, b` | `assign rd = a ^ b;` |
 | `SEQ rd, a, b` | `assign rd = a == b;` |
 | `MUX rd, sel, f, t` | `assign rd = sel ? t : f;` (note: MASM lists the *false* value first) |
 | `PADZERO rd, rs, 8` | `assign rd = {{N{1'b0}}, rs};` |
 | `(0) FINISH c` | `` `ifndef SYNTHESIS `` `always @(*) if (c) $finish;` `` `endif `` |
 | `@DEBUGSYMBOL [ symbol = "x" ]` before a def | `(* keep *) wire x = <that def>;` (skipped with a warning if `x` is not a plain identifier or already used) |
-| other `@NAME [ key = "value" ]` | parsed, then ignored |
+| other annotations, e.g. `@MEMBLOCK [ block = "mem", width = 8, capacity = 16 ]` | parsed, then ignored (any number of `key = value` pairs, string or integer values; the `[...]` is optional) |
+
+**Numbers** can be decimal (`12`), binary (`0b1100`) or hex (`0xc`). Constants and
+register init values can be any width, also over 64 bits; widths and the `FINISH`
+order must fit in 32 bits, and integer annotation values in 64 bits.
 
 **Register naming.** A `.reg` has three names. `.input` is the flip-flop's Q (the
 value stored now, an *input* to the logic) and `.output` is its D (the value for
@@ -182,10 +195,15 @@ clock edge. That is why `always @(*) if (ys_w20) $finish;` behaves like the orig
 ## Limitations
 
 - Only the instructions in the table above are supported; anything else
-  (memories, other ALU ops, `$display`, ...) is a parse error.
-- Annotations allow a single `key = "value"` pair and are not kept.
-- Constants are limited to 64 bits (`u64`). A number that does not fit is a parse error,
-  and a `.const` value that does not fit in its declared width is an error.
+  (memories, shifts, SLT/SLTS, SLICE, PARMUX, `$display`, ...) is a parse error.
+- Annotations are parsed, but only `@DEBUGSYMBOL` is kept.
+- A `.const` value that does not fit in its declared width is an error.
+- The test designs need a `$finish`: without a system call the frontend removes all
+  logic (`Main` has no outputs) and stops with "Could not detect the clock!".
+  The frontend defines `SYNTHESIS`, so that `$finish` must not be inside
+  `` `ifndef SYNTHESIS ``. `alu.sv` uses `` `ifndef EQY `` instead (see `alu.eqy`).
+  The committed `stepper.sv` has the `SYNTHESIS` guard, which was added after
+  `stepper.masm` was made; it cannot be given to the frontend as it is.
 - One clock, named `clock`; module name is `Main`.
 
 ### `$finish` and EQY
@@ -193,7 +211,9 @@ clock edge. That is why `always @(*) if (ys_w20) $finish;` behaves like the orig
 - **Not checked by EQY.** `$finish` is a simulation command, not hardware. Yosys's
   `read_verilog` defines `SYNTHESIS`, and both `stepper.sv` and `generated.sv` put the
   `$finish` inside `` `ifndef SYNTHESIS ``, so EQY never sees it. (Changing the finish
-  condition in `generated.sv` still gives an EQY PASS.)
+  condition in `generated.sv` still gives an EQY PASS.) `alu.sv` guards its `$finish`
+  with `` `ifndef EQY `` and `alu.eqy` reads it with `-DEQY`, with the same effect.
+- `scripts/sim_check.sh` only simulates stepper so far.
 - **Checked by simulation instead.** `scripts/sim_check.sh` runs both designs in Icarus
   Verilog and compares `step`/`total` every cycle and the time `$finish` is called. It
   also checks that a broken finish condition is detected.
