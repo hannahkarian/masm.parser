@@ -1,0 +1,199 @@
+.prog:
+.proc main:
+// wires
+	@DEBUGSYMBOL [ symbol = "a" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:15.15-15.16" ]
+// \a
+	.wire ys_w0 4
+	.wire  ys_w1 4
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+// $0\a[3:0]
+	.wire ys_w2 4
+	@DEBUGSYMBOL [ symbol = "b" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:16.15-16.16" ]
+// \b
+	.wire ys_w3 4
+	.wire  ys_w4 4
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+// $0\b[3:0]
+	.wire ys_w5 4
+	@DEBUGSYMBOL [ symbol = "n" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:17.15-17.16" ]
+// \n
+	.wire ys_w6 3
+	.wire  ys_w7 3
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+// $0\n[2:0]
+	.wire ys_w8 3
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:36.13-36.39" ]
+// $eq$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$14_Y
+	.wire ys_w9 1
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:36.14-36.30" ]
+// $xor$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$13_Y
+	.wire ys_w10 4
+	.wire  ys_w11 1
+	.wire  ys_w12 1
+	.wire  ys_w13 1
+	.wire  ys_w14 1
+	@DEBUGSYMBOL [ symbol = "less" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:22.9-22.13" ]
+// \less
+	.wire ys_w15 1
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:36.13-36.47" ]
+// $logic_and$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$15_Y
+	.wire ys_w16 1
+	.wire  ys_w17 1
+	.wire  ys_w18 1
+	.wire  ys_w19 1
+	.wire  ys_w20 1
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:36.51-36.58" ]
+// $logic_not$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$16_Y
+	.wire ys_w21 1
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:36.13-36.58" ]
+// $logic_and$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$17_Y
+	.wire ys_w22 1
+	@DEBUGSYMBOL [ symbol = "less_s" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:23.9-23.15" ]
+// \less_s
+	.wire ys_w23 1
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+// $0\less[0:0]
+	.wire ys_w24 1
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+// $0\less_s[0:0]
+	.wire ys_w25 1
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+	@DEBUGSYMBOL [ symbol = "shl" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:19.15-19.18" ]
+// \shl
+	.wire ys_w38 4
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+// $0\shl[3:0]
+	.wire ys_w39 4
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+	@DEBUGSYMBOL [ symbol = "shr" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:20.15-20.18" ]
+// \shr
+	.wire ys_w43 4
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+// $0\shr[3:0]
+	.wire ys_w44 4
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+	@DEBUGSYMBOL [ symbol = "ashr" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:21.15-21.19" ]
+// \ashr
+	.wire ys_w48 4
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+// $0\ashr[3:0]
+	.wire ys_w49 4
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:37.13-37.20" ]
+// $manticore_task$/home/hana/projects/masm_parser/designs/shift/shift.sv:37$EN$1
+	.wire ys_w59 1
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:25.5-39.8" ]
+// $0$manticore_task$/home/hana/projects/masm_parser/designs/shift/shift.sv:37$EN$1[0:0]$3
+	.wire ys_w60 1
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:36.14-36.23" ]
+// $xor$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$12_Y
+	.wire ys_w61 4
+
+// states
+	.reg ys_r26 4 .input ys_i27 0b0011 .output ys_o28
+	.reg ys_r29 4 .input ys_i30 0b0101 .output ys_o31
+	.reg ys_r32 3 .input ys_i33 0b000 .output ys_o34
+	.reg ys_r35 4 .input ys_i36 0b0000 .output ys_o37
+	.reg ys_r40 4 .input ys_i41 0b0000 .output ys_o42
+	.reg ys_r45 4 .input ys_i46 0b0000 .output ys_o47
+	.reg ys_r50 1 .input ys_i51 0b0 .output ys_o52
+	.reg ys_r53 1 .input ys_i54 0b0 .output ys_o55
+	.reg ys_r56 1 .input ys_i57 0b0 .output ys_o58
+
+// memories
+// constants
+	.const ys_c0 1 0b1
+	.const ys_c1 2 0b11
+	.const ys_c2 4 0b1001
+	.const ys_c3 1 0b0
+
+// instructions
+// $add$/home/hana/projects/masm_parser/designs/shift/shift.sv:26$4 : $add
+	PADZERO ys_w1, ys_c0, 4;
+	ADD ys_w2, ys_w0, ys_w1;
+// $add$/home/hana/projects/masm_parser/designs/shift/shift.sv:27$5 : $add
+	PADZERO ys_w4, ys_c1, 4;
+	ADD ys_w5, ys_w3, ys_w4;
+// $add$/home/hana/projects/masm_parser/designs/shift/shift.sv:28$6 : $add
+	PADZERO ys_w7, ys_c0, 3;
+	ADD ys_w8, ys_w6, ys_w7;
+// $eq$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$14 : $eq
+	SEQ ys_w9, ys_w10, ys_c2;
+// $logic_and$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$15 : $logic_and
+	SEQ ys_w11, ys_w9, ys_c3;
+	SEQ ys_w12, ys_w15, ys_c3;
+	XOR ys_w13, ys_w11, ys_c0;
+	XOR ys_w14, ys_w12, ys_c0;
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:36.13-36.47" ]
+	AND ys_w16, ys_w13, ys_w14;
+// $logic_and$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$17 : $logic_and
+	SEQ ys_w17, ys_w16, ys_c3;
+	SEQ ys_w18, ys_w21, ys_c3;
+	XOR ys_w19, ys_w17, ys_c0;
+	XOR ys_w20, ys_w18, ys_c0;
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:36.13-36.58" ]
+	AND ys_w22, ys_w19, ys_w20;
+// $logic_not$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$16 : $logic_not
+	SEQ ys_w21, ys_w23, ys_c3;
+// $lt$/home/hana/projects/masm_parser/designs/shift/shift.sv:33$10 : $lt
+	SLT ys_w24, ys_w0, ys_w3;
+// $lt$/home/hana/projects/masm_parser/designs/shift/shift.sv:34$11 : $lt
+	SLTS ys_w25, ys_w0, ys_w3;
+// $manticore$/home/hana/projects/masm_parser/designs/shift/shift.sv:37$18 : $manticore
+// $procdff$31 : $dff
+	MOV ys_w0, ys_i27;
+	MOV ys_o28, ys_w2;
+// $procdff$32 : $dff
+	MOV ys_w3, ys_i30;
+	MOV ys_o31, ys_w5;
+// $procdff$33 : $dff
+	MOV ys_w6, ys_i33;
+	MOV ys_o34, ys_w8;
+// $procdff$34 : $dff
+	MOV ys_w38, ys_i36;
+	MOV ys_o37, ys_w39;
+// $procdff$35 : $dff
+	MOV ys_w43, ys_i41;
+	MOV ys_o42, ys_w44;
+// $procdff$36 : $dff
+	MOV ys_w48, ys_i46;
+	MOV ys_o47, ys_w49;
+// $procdff$37 : $dff
+	MOV ys_w15, ys_i51;
+	MOV ys_o52, ys_w24;
+// $procdff$38 : $dff
+	MOV ys_w23, ys_i54;
+	MOV ys_o55, ys_w25;
+// $procdff$39 : $dff
+	MOV ys_w59, ys_i57;
+	MOV ys_o58, ys_w60;
+// $procmux$29 : $mux
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:36.13-36.58|/home/hana/projects/masm_parser/designs/shift/shift.sv:36.9-37.21" ]
+	MUX ys_w60, ys_w22, ys_c3, ys_c0;
+// $shl$/home/hana/projects/masm_parser/designs/shift/shift.sv:30$7 : $shl
+	SLL ys_w39, ys_w0, ys_w6;
+// $shr$/home/hana/projects/masm_parser/designs/shift/shift.sv:31$8 : $shr
+	SRL ys_w44, ys_w0, ys_w6;
+// $sshr$/home/hana/projects/masm_parser/designs/shift/shift.sv:32$9 : $sshr
+	SRA ys_w49, ys_w0, ys_w6;
+// $xor$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$12 : $xor
+	XOR ys_w61, ys_w38, ys_w43;
+// $xor$/home/hana/projects/masm_parser/designs/shift/shift.sv:36$13 : $xor
+	XOR ys_w10, ys_w61, ys_w48;
+// $manticore$/home/hana/projects/masm_parser/designs/shift/shift.sv:37$18 : $manticore
+	@SOURCEINFO [ file = "/home/hana/projects/masm_parser/designs/shift/shift.sv:37.13-37.20" ]
+	(0) FINISH ys_w59;
+

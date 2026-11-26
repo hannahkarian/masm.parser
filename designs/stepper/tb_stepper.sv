@@ -1,4 +1,4 @@
-// Testbench for scripts/sim_check.sh: runs either stepper.sv or generated.sv
+// Testbench for scripts/sim_check.sh: runs either stepper.sv or stepper_generated.sv
 // (both define module Main) and prints step/total every cycle. The gate design
 // has `step`/`total` too: the aliases printed from @DEBUGSYMBOL.
 `timescale 1ns/1ns

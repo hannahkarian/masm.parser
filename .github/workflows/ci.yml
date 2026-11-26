@@ -11,9 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cargo test
-      # generated.sv is what EQY checks, so it must never be stale or hand-edited.
+      # The *_generated.sv files are what EQY checks, so they must never be stale or hand-edited.
       - name: generated files are up to date
         run: |
-          cargo run -- stepper.masm generated.sv
-          cargo run -- alu.masm alu_generated.sv
-          git diff --exit-code generated.sv alu_generated.sv
+          for d in designs/*/; do
+            name=$(basename "$d")
+            cargo run -- "$d$name.masm" "$d${name}_generated.sv"
+          done
+          git diff --exit-code designs/

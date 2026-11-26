@@ -70,8 +70,6 @@ Instruction: Instruction = {
         Instruction::Mov { rd, rs },
     <op:BinaryOp> <rd:Ident> "," <rs1:Ident> "," <rs2:Ident> =>
         Instruction::Binary { op, rd, rs1, rs2 },
-    "SEQ" <rd:Ident> "," <rs1:Ident> "," <rs2:Ident> =>
-        Instruction::Seq { rd, rs1, rs2 },
     "MUX" <rd:Ident> "," <sel:Ident> "," <rfalse:Ident> "," <rtrue:Ident> =>
         Instruction::Mux { rd, sel, rfalse, rtrue },
     "PADZERO" <rd:Ident> "," <rs:Ident> "," <width:Width> =>
@@ -80,14 +78,20 @@ Instruction: Instruction = {
         Instruction::Finish { order, cond },
 };
 
-// The ALU operations that all look like `OP rd, rs1, rs2` with equal widths.
+// The ALU operations, which all look like `OP rd, rs1, rs2`.
 BinaryOp: BinaryOp = {
-    "ADD" => BinaryOp::Add,
-    "SUB" => BinaryOp::Sub,
-    "MUL" => BinaryOp::Mul,
-    "AND" => BinaryOp::And,
-    "OR"  => BinaryOp::Or,
-    "XOR" => BinaryOp::Xor,
+    "ADD"  => BinaryOp::Add,
+    "SUB"  => BinaryOp::Sub,
+    "MUL"  => BinaryOp::Mul,
+    "AND"  => BinaryOp::And,
+    "OR"   => BinaryOp::Or,
+    "XOR"  => BinaryOp::Xor,
+    "SLL"  => BinaryOp::Sll,
+    "SRL"  => BinaryOp::Srl,
+    "SRA"  => BinaryOp::Sra,
+    "SEQ"  => BinaryOp::Seq,
+    "SLT"  => BinaryOp::Slt,
+    "SLTS" => BinaryOp::Slts,
 };
 
 Ident: String = r"[A-Za-z_][A-Za-z0-9_]*" => <>.to_string();

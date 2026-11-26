@@ -1,0 +1,265 @@
+.prog:
+.proc main:
+// wires
+	@DEBUGSYMBOL [ symbol = "a" ]
+	@SOURCEINFO [ file = "shift_widths.sv:19.15-19.16" ]
+// \a
+	.wire ys_w0 4
+	.wire  ys_w1 4
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+// $0\a[3:0]
+	.wire ys_w2 4
+	@DEBUGSYMBOL [ symbol = "c" ]
+	@SOURCEINFO [ file = "shift_widths.sv:20.15-20.16" ]
+// \c
+	.wire ys_w3 6
+	.wire  ys_w4 6
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+// $0\c[5:0]
+	.wire ys_w5 6
+	@DEBUGSYMBOL [ symbol = "n" ]
+	@SOURCEINFO [ file = "shift_widths.sv:21.15-21.16" ]
+// \n
+	.wire ys_w6 3
+	.wire  ys_w7 3
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+// $0\n[2:0]
+	.wire ys_w8 3
+	@SOURCEINFO [ file = "shift_widths.sv:41.13-41.62" ]
+// $eq$shift_widths.sv:41$14_Y
+	.wire ys_w9 1
+	@SOURCEINFO [ file = "shift_widths.sv:41.14-41.53" ]
+// $xor$shift_widths.sv:41$13_Y
+	.wire ys_w10 8
+	.wire  ys_w11 8
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+// $0\ge[0:0]
+	.wire ys_w12 1
+	.wire  ys_w13 1
+	.wire  ys_w14 1
+	.wire  ys_w15 6
+	.wire  ys_w16 6
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+// $0\gt[0:0]
+	.wire ys_w17 1
+	.wire  ys_w18 6
+	.wire  ys_w19 1
+	.wire  ys_w20 1
+	.wire  ys_w21 1
+	.wire  ys_w22 1
+	@DEBUGSYMBOL [ symbol = "gt" ]
+	@SOURCEINFO [ file = "shift_widths.sv:25.9-25.11" ]
+// \gt
+	.wire ys_w23 1
+	@SOURCEINFO [ file = "shift_widths.sv:41.13-41.68" ]
+// $logic_and$shift_widths.sv:41$15_Y
+	.wire ys_w24 1
+	.wire  ys_w25 1
+	.wire  ys_w26 1
+	.wire  ys_w27 1
+	.wire  ys_w28 1
+	@DEBUGSYMBOL [ symbol = "ge" ]
+	@SOURCEINFO [ file = "shift_widths.sv:25.17-25.19" ]
+// \ge
+	.wire ys_w29 1
+	@SOURCEINFO [ file = "shift_widths.sv:41.13-41.74" ]
+// $logic_and$shift_widths.sv:41$16_Y
+	.wire ys_w30 1
+	.wire  ys_w31 1
+	.wire  ys_w32 1
+	.wire  ys_w33 1
+	.wire  ys_w34 1
+	@DEBUGSYMBOL [ symbol = "lts_mixed" ]
+	@SOURCEINFO [ file = "shift_widths.sv:26.9-26.18" ]
+// \lts_mixed
+	.wire ys_w35 1
+	@SOURCEINFO [ file = "shift_widths.sv:41.13-41.87" ]
+// $logic_and$shift_widths.sv:41$17_Y
+	.wire ys_w36 1
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+// $0\lts_mixed[0:0]
+	.wire ys_w37 1
+	.wire  ys_w38 1
+	.wire  ys_w39 6
+	.wire  ys_w40 6
+	.wire  ys_w41 6
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+	@DEBUGSYMBOL [ symbol = "narrow" ]
+	@SOURCEINFO [ file = "shift_widths.sv:23.15-23.21" ]
+// \narrow
+	.wire ys_w54 2
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+// $0\narrow[1:0]
+	.wire ys_w55 2
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+	@DEBUGSYMBOL [ symbol = "cat" ]
+	@SOURCEINFO [ file = "shift_widths.sv:24.15-24.18" ]
+// \cat
+	.wire ys_w59 8
+	.wire  ys_w60 4
+	.wire  ys_w61 4
+	.wire  ys_w62 4
+	.wire  ys_w63 4
+	.wire  ys_w64 8
+	.wire  ys_w65 8
+	.wire  ys_w66 8
+	.wire  ys_w67 8
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+	@DEBUGSYMBOL [ symbol = "wide_shl" ]
+	@SOURCEINFO [ file = "shift_widths.sv:27.15-27.23" ]
+// \wide_shl
+	.wire ys_w80 6
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+// $0\wide_shl[5:0]
+	.wire ys_w81 6
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+	@SOURCEINFO [ file = "shift_widths.sv:42.13-42.20" ]
+// $manticore_task$shift_widths.sv:42$EN$1
+	.wire ys_w85 1
+	@SOURCEINFO [ file = "shift_widths.sv:29.5-44.8" ]
+// $0$manticore_task$shift_widths.sv:42$EN$1[0:0]$3
+	.wire ys_w86 1
+	.wire  ys_w87 6
+	.wire  ys_w88 8
+	@SOURCEINFO [ file = "shift_widths.sv:41.14-41.36" ]
+// $xor$shift_widths.sv:41$12_Y
+	.wire ys_w89 8
+	.wire  ys_w90 8
+
+// states
+	.reg ys_r42 4 .input ys_i43 0b0011 .output ys_o44
+	.reg ys_r45 6 .input ys_i46 0b001001 .output ys_o47
+	.reg ys_r48 3 .input ys_i49 0b000 .output ys_o50
+	.reg ys_r51 2 .input ys_i52 0b00 .output ys_o53
+	.reg ys_r56 8 .input ys_i57 0b00000000 .output ys_o58
+	.reg ys_r68 1 .input ys_i69 0b0 .output ys_o70
+	.reg ys_r71 1 .input ys_i72 0b0 .output ys_o73
+	.reg ys_r74 1 .input ys_i75 0b0 .output ys_o76
+	.reg ys_r77 6 .input ys_i78 0b000000 .output ys_o79
+	.reg ys_r82 1 .input ys_i83 0b0 .output ys_o84
+
+// memories
+// constants
+	.const ys_c0 1 0b1
+	.const ys_c1 3 0b101
+	.const ys_c2 2 0b11
+	.const ys_c3 1 0b0
+	.const ys_c4 32 0b00000000000000000000000000000011
+	.const ys_c5 6 0b000000
+	.const ys_c6 6 0b110000
+	.const ys_c7 32 0b00000000000000000000000000000001
+	.const ys_c8 32 0b00000000000000000000000000000100
+
+// instructions
+// $add$shift_widths.sv:30$4 : $add
+	PADZERO ys_w1, ys_c0, 4;
+	ADD ys_w2, ys_w0, ys_w1;
+// $add$shift_widths.sv:31$5 : $add
+	PADZERO ys_w4, ys_c1, 6;
+	ADD ys_w5, ys_w3, ys_w4;
+// $add$shift_widths.sv:32$6 : $add
+	PADZERO ys_w7, ys_c0, 3;
+	ADD ys_w8, ys_w6, ys_w7;
+// $eq$shift_widths.sv:41$14 : $eq
+	PADZERO ys_w11, ys_c2, 8;
+	SEQ ys_w9, ys_w10, ys_w11;
+// $ge$shift_widths.sv:37$9 : $ge
+	PADZERO ys_w15, ys_w0, 6;
+	SEQ ys_w13, ys_w15, ys_w3;
+	PADZERO ys_w16, ys_w0, 6;
+	SLT ys_w14, ys_w3, ys_w16;
+	OR ys_w12, ys_w14, ys_w13;
+// $gt$shift_widths.sv:36$8 : $gt
+	PADZERO ys_w18, ys_w0, 6;
+	SLT ys_w17, ys_w3, ys_w18;
+// $logic_and$shift_widths.sv:41$15 : $logic_and
+	SEQ ys_w19, ys_w9, ys_c3;
+	SEQ ys_w20, ys_w23, ys_c3;
+	XOR ys_w21, ys_w19, ys_c0;
+	XOR ys_w22, ys_w20, ys_c0;
+	@SOURCEINFO [ file = "shift_widths.sv:41.13-41.68" ]
+	AND ys_w24, ys_w21, ys_w22;
+// $logic_and$shift_widths.sv:41$16 : $logic_and
+	SEQ ys_w25, ys_w24, ys_c3;
+	SEQ ys_w26, ys_w29, ys_c3;
+	XOR ys_w27, ys_w25, ys_c0;
+	XOR ys_w28, ys_w26, ys_c0;
+	@SOURCEINFO [ file = "shift_widths.sv:41.13-41.74" ]
+	AND ys_w30, ys_w27, ys_w28;
+// $logic_and$shift_widths.sv:41$17 : $logic_and
+	SEQ ys_w31, ys_w30, ys_c3;
+	SEQ ys_w32, ys_w35, ys_c3;
+	XOR ys_w33, ys_w31, ys_c0;
+	XOR ys_w34, ys_w32, ys_c0;
+	@SOURCEINFO [ file = "shift_widths.sv:41.13-41.87" ]
+	AND ys_w36, ys_w33, ys_w34;
+// $lt$shift_widths.sv:38$10 : $lt
+	SRL ys_w38, ys_w0, ys_c4;
+	MUX ys_w39, ys_w38, ys_c5, ys_c6;
+	PADZERO ys_w41, ys_w0, 6;
+	OR ys_w40, ys_w41, ys_w39;
+	SLTS ys_w37, ys_w40, ys_w3;
+// $manticore$shift_widths.sv:42$18 : $manticore
+// $procdff$32 : $dff
+	MOV ys_w0, ys_i43;
+	MOV ys_o44, ys_w2;
+// $procdff$33 : $dff
+	MOV ys_w3, ys_i46;
+	MOV ys_o47, ys_w5;
+// $procdff$34 : $dff
+	MOV ys_w6, ys_i49;
+	MOV ys_o50, ys_w8;
+// $procdff$35 : $dff
+	MOV ys_w54, ys_i52;
+	MOV ys_o53, ys_w55;
+// $procdff$36 : $dff
+	MOV ys_w59, ys_i57;
+// Concat gen { \a \n 1'1 }
+	PADZERO ys_w60, ys_c0, 4;
+	PADZERO ys_w61, ys_w6, 4;
+	SLL ys_w62, ys_w61, ys_c7;
+	OR ys_w63, ys_w62, ys_w60;
+	PADZERO ys_w64, ys_w63, 8;
+	PADZERO ys_w65, ys_w0, 8;
+	SLL ys_w66, ys_w65, ys_c8;
+	OR ys_w67, ys_w66, ys_w64;
+	MOV ys_o58, ys_w67;
+// $procdff$37 : $dff
+	MOV ys_w23, ys_i69;
+	MOV ys_o70, ys_w17;
+// $procdff$38 : $dff
+	MOV ys_w29, ys_i72;
+	MOV ys_o73, ys_w12;
+// $procdff$39 : $dff
+	MOV ys_w35, ys_i75;
+	MOV ys_o76, ys_w37;
+// $procdff$40 : $dff
+	MOV ys_w80, ys_i78;
+	MOV ys_o79, ys_w81;
+// $procdff$41 : $dff
+	MOV ys_w85, ys_i83;
+	MOV ys_o84, ys_w86;
+// $procmux$30 : $mux
+	@SOURCEINFO [ file = "shift_widths.sv:41.13-41.87|shift_widths.sv:41.9-42.21" ]
+	MUX ys_w86, ys_w36, ys_c3, ys_c0;
+// $shl$shift_widths.sv:39$11 : $shl
+	PADZERO ys_w87, ys_w0, 6;
+	SLL ys_w81, ys_w87, ys_w6;
+// $shr$shift_widths.sv:34$7 : $shr
+	SRL ys_w55, ys_w0, ys_w6;
+// $xor$shift_widths.sv:41$12 : $xor
+	PADZERO ys_w88, ys_w80, 8;
+	XOR ys_w89, ys_w59, ys_w88;
+// $xor$shift_widths.sv:41$13 : $xor
+	PADZERO ys_w90, ys_w54, 8;
+	XOR ys_w10, ys_w89, ys_w90;
+// $manticore$shift_widths.sv:42$18 : $manticore
+	@SOURCEINFO [ file = "shift_widths.sv:42.13-42.20" ]
+	(0) FINISH ys_w85;
+

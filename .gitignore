@@ -2,7 +2,6 @@
 *.log
 .env
 .vscode/
-# EQY / simulation work directories
-/stepper/
-/alu/
+# EQY / simulation work directories (eqy -f x.eqy makes x/ next to it)
+/designs/*/*/
 /build/

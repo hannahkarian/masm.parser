@@ -171,11 +171,15 @@ impl Context {
             Instruction::Mov { rd, rs } if w(rd) != w(rs) => {
                 Some("MOV operands differ in width".to_string())
             }
-            Instruction::Binary { op, rd, rs1, rs2 } if w(rd) != w(rs1) || w(rd) != w(rs2) => {
-                Some(format!("{} operands differ in width", op.mnemonic()))
-            }
-            Instruction::Seq { rd, rs1, rs2 } if w(rd) != 1 || w(rs1) != w(rs2) => {
-                Some("SEQ needs a 1-bit result and equal-width operands".to_string())
+            Instruction::Binary { op, rd, rs1, rs2 } => {
+                let rule = width_rule(*op);
+                let ok = match rule {
+                    WidthRule::AllEqual => w(rd) == w(rs1) && w(rd) == w(rs2),
+                    WidthRule::Compare => w(rd) == 1 && w(rs1) == w(rs2),
+                    WidthRule::Shift => true,
+                    WidthRule::ShiftArithmetic => w(rd) == w(rs1),
+                };
+                (!ok).then(|| format!("{} {}", op.mnemonic(), rule.problem()))
             }
             Instruction::Mux {
                 rd,
@@ -196,6 +200,57 @@ impl Context {
         if let Some(problem) = problem {
             self.warnings.push(format!("{problem}: {instr:?}"));
         }
+    }
+}
+
+/// The width rule an ALU operation must follow. They are based on what
+/// manticore_writer.cc writes and what the Scala compiler's interpreter
+/// (UnconstrainedInterpreter.scala) and width-conversion pass
+/// (WidthConversionCore.scala) accept. A broken rule is a warning, not an error:
+/// the Verilog is still valid, but the Scala compiler might reject the MASM or
+/// read it differently.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum WidthRule {
+    /// ADD, SUB, MUL, AND, OR, XOR: `rd`, `rs1` and `rs2` all the same width.
+    /// The writer extends or slices both operands to the result width first.
+    AllEqual,
+    /// SEQ, SLT, SLTS: a 1-bit `rd`, and `rs1` and `rs2` the same width. The writer
+    /// extends both operands to the wider of the two; for SLTS this matters,
+    /// because the sign bit is the top bit of each operand.
+    Compare,
+    /// SLL, SRL: no rule. The result is `rs1` shifted, then cut to the width of
+    /// `rd`, and the writer uses this: `sextConvert` takes the sign bit of an N-bit
+    /// value with `SRL sign(1 bit), value(N bits), N-1`. The shift amount `rs2` can
+    /// have any width; concatenations shift by a 32-bit constant.
+    Shift,
+    /// SRA: `rd` and `rs1` the same width. The sign bit is the top bit of `rs1`;
+    /// the width-conversion pass stops with an error when the widths differ.
+    ShiftArithmetic,
+}
+
+impl WidthRule {
+    /// The warning text, after the mnemonic.
+    fn problem(self) -> &'static str {
+        match self {
+            WidthRule::AllEqual => "operands differ in width",
+            WidthRule::Compare => "needs a 1-bit result and equal-width operands",
+            WidthRule::Shift => unreachable!("shifts have no width rule"),
+            WidthRule::ShiftArithmetic => "result and shifted operand differ in width",
+        }
+    }
+}
+
+fn width_rule(op: BinaryOp) -> WidthRule {
+    match op {
+        BinaryOp::Add
+        | BinaryOp::Sub
+        | BinaryOp::Mul
+        | BinaryOp::And
+        | BinaryOp::Or
+        | BinaryOp::Xor => WidthRule::AllEqual,
+        BinaryOp::Seq | BinaryOp::Slt | BinaryOp::Slts => WidthRule::Compare,
+        BinaryOp::Sll | BinaryOp::Srl => WidthRule::Shift,
+        BinaryOp::Sra => WidthRule::ShiftArithmetic,
     }
 }
 
@@ -239,9 +294,7 @@ fn is_simple_identifier(name: &str) -> bool {
 fn operands(instr: &Instruction) -> Vec<&String> {
     match instr {
         Instruction::Mov { rd, rs } | Instruction::PadZero { rd, rs, .. } => vec![rd, rs],
-        Instruction::Binary { rd, rs1, rs2, .. } | Instruction::Seq { rd, rs1, rs2 } => {
-            vec![rd, rs1, rs2]
-        }
+        Instruction::Binary { rd, rs1, rs2, .. } => vec![rd, rs1, rs2],
         Instruction::Mux {
             rd,
             sel,
@@ -256,7 +309,6 @@ fn destination(instr: &Instruction) -> Option<&str> {
     match instr {
         Instruction::Mov { rd, .. }
         | Instruction::Binary { rd, .. }
-        | Instruction::Seq { rd, .. }
         | Instruction::Mux { rd, .. }
         | Instruction::PadZero { rd, .. } => Some(rd),
         Instruction::Finish { .. } => None,
@@ -295,8 +347,7 @@ fn assign<'a>(rd: &'a str, expr: Doc<'a>) -> Doc<'a> {
         .group()
 }
 
-/// The Verilog operator for a MASM operation. All operands are unsigned and as wide
-/// as the result, so `-` and `*` wrap around exactly like SUB and MUL do.
+/// The Verilog operator for a MASM operation.
 fn operator(op: BinaryOp) -> &'static str {
     match op {
         BinaryOp::Add => "+",
@@ -305,17 +356,62 @@ fn operator(op: BinaryOp) -> &'static str {
         BinaryOp::And => "&",
         BinaryOp::Or => "|",
         BinaryOp::Xor => "^",
+        BinaryOp::Sll => "<<",
+        BinaryOp::Srl => ">>",
+        BinaryOp::Sra => ">>>",
+        BinaryOp::Seq => "==",
+        BinaryOp::Slt | BinaryOp::Slts => "<",
     }
 }
 
 /// `lhs op rhs`
-fn binary<'a>(lhs: &'a str, op: &'static str, rhs: &'a str) -> Doc<'a> {
-    RcDoc::text(lhs)
-        .append(" ")
+fn binary<'a>(lhs: Doc<'a>, op: &'static str, rhs: Doc<'a>) -> Doc<'a> {
+    lhs.append(" ")
         .append(op)
         .append(RcDoc::line())
         .append(rhs)
         .group()
+}
+
+/// `$signed(name)`
+fn signed(name: &str) -> Doc<'_> {
+    RcDoc::text("$signed(").append(name).append(")")
+}
+
+/// The right-hand side of `assign rd = ...;` for an ALU operation.
+///
+/// Verilog sizes an expression to the widest of its operands *and* the left-hand
+/// side of the `assign`, and extends unsigned values with zeros. That is the MASM
+/// meaning for everything except the two signed operations:
+/// - ADD/SUB/MUL wrap around at the width of `rd`, like the Scala interpreter.
+/// - SLL/SRL shift `rs1` and then keep the low bits; if `rd` is wider than `rs1`,
+///   the bits shifted out of `rs1` are kept, as in the interpreter.
+/// - SEQ/SLT compare two unsigned values and give 1 bit.
+///
+/// The signed ones need `$signed`, so that the top bit of `rs1` is read as a sign:
+/// - SLTS: `$signed(rs1) < $signed(rs2)`, a two's-complement comparison. Both
+///   sides must be signed, or Verilog compares them as unsigned.
+/// - SRA: `$signed(rs1) >>> rs2` fills with the sign bit (on an unsigned value
+///   `>>>` fills with zeros, like `>>`). The shift amount stays unsigned.
+fn alu_expr<'a>(op: BinaryOp, rd: &str, rs1: &'a str, rs2: &'a str, ctx: &Context) -> Doc<'a> {
+    let plain = |name: &'a str| RcDoc::text(name);
+    match op {
+        BinaryOp::Slts => binary(signed(rs1), operator(op), signed(rs2)),
+        BinaryOp::Sra => {
+            let shift = binary(signed(rs1), operator(op), plain(rs2));
+            // Normally `rd` is as wide as `rs1` (there is a width warning otherwise).
+            // If not, Verilog would sign-extend `rs1` to the width of `rd` first, but
+            // the interpreter shifts at the width of `rs1` and then zero-extends or
+            // cuts the result. `{...}` makes the shift happen at the width of `rs1`
+            // and is unsigned, which gives exactly that.
+            if ctx.width(rs1) == ctx.width(rd) {
+                shift
+            } else {
+                RcDoc::text("{").append(shift).append("}")
+            }
+        }
+        _ => binary(plain(rs1), operator(op), plain(rs2)),
+    }
 }
 
 /// `{{N{1'b0}}, rs}`
@@ -375,8 +471,7 @@ pub fn pp_declaration<'a>(def: &'a Def, _ctx: &Context) -> Doc<'a> {
 pub fn pp_instruction<'a>(instr: &'a Instruction, ctx: &Context) -> Doc<'a> {
     match instr {
         Instruction::Mov { rd, rs } => assign(rd, RcDoc::text(rs.as_str())),
-        Instruction::Binary { op, rd, rs1, rs2 } => assign(rd, binary(rs1, operator(*op), rs2)),
-        Instruction::Seq { rd, rs1, rs2 } => assign(rd, binary(rs1, "==", rs2)),
+        Instruction::Binary { op, rd, rs1, rs2 } => assign(rd, alu_expr(*op, rd, rs1, rs2, ctx)),
         // MASM lists the false value first, Verilog's `?:` the true value.
         Instruction::Mux {
             rd,

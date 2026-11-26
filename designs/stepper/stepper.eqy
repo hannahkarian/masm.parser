@@ -1,4 +1,4 @@
-# Equivalence check: stepper.sv (gold) vs generated.sv (gate, made by masm_parser).
+# Equivalence check: stepper.sv (gold) vs stepper_generated.sv (gate, made by masm_parser).
 #
 # Main has no output ports, so without help Yosys would delete all logic as unused
 # and EQY would "prove" two empty modules equal. To prevent this, the user-named
@@ -15,7 +15,7 @@ setattr -set keep 1 w:* w:$* %d
 prep -top Main
 
 [gate]
-read_verilog -sv generated.sv
+read_verilog -sv stepper_generated.sv
 prep -top Main
 
 # The partitions contain registers, so a sequential proof is needed.

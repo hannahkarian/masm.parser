@@ -1,0 +1,15 @@
+# Equivalence check: shift_widths.sv (gold) vs shift_widths_generated.sv (gate, made by masm_parser).
+# Same setup as alu.eqy (see the comments there and in stepper.eqy).
+
+[gold]
+read_verilog -sv -DEQY shift_widths.sv
+setattr -set keep 1 w:* w:$* %d
+prep -top Main
+
+[gate]
+read_verilog -sv shift_widths_generated.sv
+prep -top Main
+
+[strategy sat]
+use sat
+depth 10

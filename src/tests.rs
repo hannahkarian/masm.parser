@@ -71,6 +71,84 @@ fn plain_alu_operations() {
 }
 
 #[test]
+fn shifts_and_comparisons() {
+    let ops = [
+        ("SLL", "assign d = a << b;"),
+        ("SRL", "assign d = a >> b;"),
+        ("SRA", "assign d = $signed(a) >>> b;"),
+    ];
+    for (masm, expected) in ops {
+        let (v, w) = generate(&prog(&format!(
+            ".wire a 4\n.wire b 3\n.wire d 4\n{masm} d, a, b;"
+        )))
+        .unwrap();
+        assert!(v.contains(expected), "{masm}: {v}");
+        assert!(w.is_empty(), "{masm}: {w:?}"); // the shift amount may be narrower
+    }
+    let ops = [
+        ("SEQ", "assign d = a == b;"),
+        ("SLT", "assign d = a < b;"),
+        // both sides signed, or Verilog compares unsigned
+        ("SLTS", "assign d = $signed(a) < $signed(b);"),
+    ];
+    for (masm, expected) in ops {
+        let (v, w) = generate(&prog(&format!(
+            ".wire a 4\n.wire b 4\n.wire d 1\n{masm} d, a, b;"
+        )))
+        .unwrap();
+        assert!(v.contains(expected), "{masm}: {v}");
+        assert!(w.is_empty(), "{masm}: {w:?}");
+    }
+}
+
+#[test]
+fn slt_and_slts_are_different_keywords() {
+    // `SLTS` must not be read as `SLT` followed by something else
+    let v = verilog_of(".wire a 4\n.wire b 4\n.wire d 1\n.wire e 1\nSLTS d, a, b;\nSLT e, a, b;");
+    assert!(v.contains("assign d = $signed(a) < $signed(b);"), "{v}");
+    assert!(v.contains("assign e = a < b;"), "{v}");
+}
+
+#[test]
+fn comparisons_need_a_1_bit_result_and_equal_operands() {
+    for masm in ["SEQ", "SLT", "SLTS"] {
+        for body in [
+            ".wire a 4\n.wire b 2\n.wire d 1",
+            ".wire a 4\n.wire b 4\n.wire d 2",
+        ] {
+            let (_, w) = generate(&prog(&format!("{body}\n{masm} d, a, b;"))).unwrap();
+            let expected = format!("{masm} needs a 1-bit result and equal-width operands");
+            assert!(w.iter().any(|m| m.contains(&expected)), "{masm}: {w:?}");
+        }
+    }
+}
+
+#[test]
+fn sll_and_srl_allow_different_result_and_operand_widths() {
+    // The frontend writes both: sextConvert takes the sign bit of a 4-bit value with
+    // `SRL sign(1), value(4), 3`, and a 32-bit constant is a common shift amount.
+    let (v, w) = generate(&prog(
+        ".wire x 4\n.const k 32 3\n.wire s 1\n.wire y 8\nSRL s, x, k;\nSLL y, x, k;",
+    ))
+    .unwrap();
+    assert!(w.is_empty(), "{w:?}");
+    assert!(v.contains("assign s = x >> k;"), "{v}");
+    assert!(v.contains("assign y = x << k;"), "{v}");
+}
+
+#[test]
+fn sra_with_different_widths_warns_and_shifts_at_the_operand_width() {
+    let (v, w) = generate(&prog(".wire a 4\n.wire n 3\n.wire d 6\nSRA d, a, n;")).unwrap();
+    assert!(
+        w.iter()
+            .any(|m| m.contains("SRA result and shifted operand differ in width")),
+        "{w:?}"
+    );
+    // `{...}`: shift at 4 bits, then zero-extend, as the Scala interpreter does
+    assert!(v.contains("assign d = {$signed(a) >>> n};"), "{v}");
+}
+
+#[test]
 fn alu_operations_need_all_three_operands() {
     for body in ["SUB d, a;", "XOR d, a, b, a;", "MUL d a b;"] {
         let body = format!(".wire a 4\n.wire b 4\n.wire d 4\n{body}");
